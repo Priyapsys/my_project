@@ -1,0 +1,26 @@
+{
+  "name": "global-payment-system",
+  "version": "1.0.0",
+  "description": "Production-grade real-time global payment system with blockchain-anchored settlement",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test:flow": "bash scripts/test_flow.sh"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.12.7",
+    "@types/uuid": "^9.0.8",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.5"
+  },
+  "keywords": ["fintech", "payments", "settlement", "blockchain", "typescript"],
+  "author": "Global Pay",
+  "license": "MIT"
+}

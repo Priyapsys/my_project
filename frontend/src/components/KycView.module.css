@@ -1,0 +1,200 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 40px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.header {
+  width: 100%;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+}
+.logoRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logoIcon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, rgba(0,212,170,0.15), rgba(0,136,204,0.1));
+  border: 1px solid rgba(0,212,170,0.25);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.brand { font-size: 17px; font-weight: 700; letter-spacing: -0.03em; }
+
+.stepContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+}
+
+.content { margin-bottom: 24px; }
+.content h2 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+}
+.content p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Form Styles */
+.form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.formGroup label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.input {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: all 0.2s var(--ease);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(0,212,170,0.1);
+}
+
+.fileInput {
+  width: 100%;
+  padding: 10px;
+  background: var(--bg-elevated);
+  border: 1px dashed var(--border-active);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+.fileInput::-webkit-file-upload-button {
+  background: var(--teal-subtle);
+  border: 1px solid var(--border-active);
+  border-radius: var(--radius-sm);
+  color: var(--teal);
+  padding: 8px 12px;
+  margin-right: 12px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.livenessBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  background: rgba(0,136,204,0.05);
+  border: 1px solid rgba(0,136,204,0.3);
+  border-radius: var(--radius-md);
+  color: #0088CC;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s var(--ease);
+}
+.livenessBtn:hover {
+  background: rgba(0,136,204,0.1);
+}
+.livenessBtnDone {
+  background: rgba(16,185,129,0.1);
+  border-color: #10B981;
+  color: #10B981;
+}
+.livenessBtnDone:hover {
+  background: rgba(16,185,129,0.15);
+}
+
+.verifyBtn {
+  margin-top: 8px;
+}
+
+/* Loading State */
+.loadingPulse {
+  position: relative;
+  width: 90px; height: 90px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 24px;
+}
+.iconWrapLoading {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  z-index: 2;
+}
+.spinnerWrapper {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  animation: rotate 2s linear infinite;
+  z-index: 1;
+}
+.spinnerSvg { width: 100%; height: 100%; }
+.spinnerPath {
+  stroke: var(--teal);
+  stroke-linecap: round;
+  animation: dash 1.5s ease-in-out infinite;
+}
+
+@keyframes rotate { 100% { transform: rotate(360deg); } }
+@keyframes dash {
+  0% { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
+  50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
+  100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
+}
+
+/* Success State */
+.iconWrapDone {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--success-bg);
+  margin-bottom: 24px;
+  box-shadow: 0 0 40px rgba(16,185,129,0.2);
+}
+
+@media (max-width: 600px) {
+  .card { padding: 24px; margin: 16px; }
+}

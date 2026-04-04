@@ -1,0 +1,175 @@
+.wrapper { max-width: 560px; }
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.cardHeader { display: flex; align-items: center; gap: 14px; }
+.cardIcon {
+  width: 44px; height: 44px;
+  background: var(--teal-subtle);
+  border: 1px solid var(--border-active);
+  border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--teal);
+  flex-shrink: 0;
+}
+.cardTitle { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+.cardSub { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+.form { display: flex; flex-direction: column; gap: 16px; }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.amountRow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: 12px;
+}
+.amountField .inputWithSelect {
+  display: flex;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-elevated);
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.amountField .inputWithSelect:focus-within {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-glow);
+}
+.amountInput {
+  flex: 1;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 13px 12px;
+  min-width: 0;
+}
+.amountInput:focus { box-shadow: none !important; }
+.currencySelect {
+  border: none !important;
+  border-left: 1.5px solid var(--border) !important;
+  border-radius: 0 !important;
+  background: var(--bg-card) !important;
+  box-shadow: none !important;
+  padding: 13px 10px !important;
+  width: 76px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.currencySelect:focus { box-shadow: none !important; }
+
+.arrowWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 2px;
+}
+.arrow {
+  width: 32px; height: 32px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--teal);
+  font-size: 16px;
+}
+
+.destField {}
+.destSelect {
+  height: 50px;
+  font-weight: 600;
+}
+
+/* FX Preview */
+.fxPreview {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fxRow { display: flex; justify-content: space-between; align-items: center; }
+.fxLabel { font-size: 13px; color: var(--text-secondary); }
+.fxAmount { font-size: 15px; font-weight: 700; color: var(--teal); }
+.fxRate { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+.fxFree { font-size: 13px; color: var(--success); font-weight: 600; }
+
+.submitBtn { margin-top: 4px; }
+
+/* Success */
+.successBox {
+  background: var(--success-bg);
+  border: 1px solid rgba(16,185,129,0.25);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+.successHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--success);
+  margin-bottom: 14px;
+}
+.successGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.successItem {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.successItem span:first-child { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.successItem span:last-child { font-size: 13px; font-weight: 600; }
+
+/* Error */
+.errorBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--error-bg);
+  border: 1px solid rgba(248,113,113,0.25);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  font-size: 14px;
+  color: var(--error);
+}
+
+@media (max-width: 600px) {
+  .amountRow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .arrow {
+    transform: rotate(90deg);
+  }
+  .card {
+    padding: 20px;
+  }
+}
