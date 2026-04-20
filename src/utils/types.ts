@@ -21,11 +21,19 @@ export interface AuthenticatedRequest extends Request {
 // ----------------------------
 //  KYC
 // ----------------------------
-export type KycStatus = 'pending' | 'verified';
+export type KycStatus = 'PENDING' | 'VERIFIED';
+
+export type IdType = 'passport' | 'national_id' | 'driver_license';
 
 export interface KycRecord {
   userId: string;
   status: KycStatus;
+  idType?: IdType;
+  idNumber?: string;
+  documentUploaded: boolean;
+  addressProofUploaded: boolean;
+  faceVerified: boolean;
+  createdAt: Date;
   verifiedAt?: Date;
 }
 
@@ -95,7 +103,9 @@ export interface BatchSummary {
 // ----------------------------
 export interface BlockchainRecord {
   batchId: string;
-  txHash: string;
+  txHash: string | null;
+  batchHash: string;
+  explorerUrl: string | null;
   anchoredAt: Date;
   batch: BatchSummary;
 }

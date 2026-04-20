@@ -2,15 +2,17 @@
 //  SETTLEMENT SERVICE — Batch Creation + Blockchain Anchoring
 // ============================================================
 
-import { BatchSummary, BlockchainRecord } from '../utils/types';
+import { BatchSummary } from '../utils/types';
 import { logger } from '../utils/logger';
 import { flushQueue, createBatch, getQueueSize } from '../modules/settlement';
-import { storeBatch } from '../modules/blockchain';
+import { storeBatch } from './blockchainService';
 import { updateTransactionBatch } from '../modules/ledger';
 
 export interface SettlementRunResult {
   batchId: string;
-  txHash: string;
+  txHash: string | null;
+  batchHash: string;
+  explorerUrl: string | null;
   transactionCount: number;
   totalVolume: Record<string, number>;
   timestamp: string;
@@ -38,7 +40,7 @@ export async function runSettlement(): Promise<SettlementRunResult> {
   const batch: BatchSummary = createBatch(transactions);
 
   // ── Step 3: Anchor to blockchain ──────────────────────────
-  const chainRecord: BlockchainRecord = storeBatch(batch);
+  const proof = await storeBatch(batch);
 
   // ── Step 4: Tag transactions with batchId in ledger ───────
   for (const tx of transactions) {
@@ -47,11 +49,13 @@ export async function runSettlement(): Promise<SettlementRunResult> {
   logger.settle(`Tagged ${transactions.length} transactions with batchId: ${batch.batchId}`);
 
   // ── Step 5: Attach hash to batch record ────────────────────
-  batch.blockchainTxHash = chainRecord.txHash;
+  batch.blockchainTxHash = proof.txHash ?? undefined;
 
   logger.success(`Settlement complete`, {
     batchId: batch.batchId,
-    txHash: chainRecord.txHash,
+    txHash: proof.txHash,
+    batchHash: proof.batchHash,
+    explorerUrl: proof.explorerUrl,
     transactionCount: batch.transactionCount,
     totalVolume: batch.totalVolume,
   });
@@ -59,7 +63,9 @@ export async function runSettlement(): Promise<SettlementRunResult> {
 
   return {
     batchId: batch.batchId,
-    txHash: chainRecord.txHash,
+    txHash: proof.txHash,
+    batchHash: proof.batchHash,
+    explorerUrl: proof.explorerUrl,
     transactionCount: batch.transactionCount,
     totalVolume: batch.totalVolume,
     timestamp: batch.timestamp.toISOString(),

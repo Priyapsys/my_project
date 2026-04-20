@@ -23,21 +23,36 @@ export const api = {
   login: (userId) =>
     request('POST', '/login', { userId }),
 
-  kycVerify: (token) =>
-    request('POST', '/kyc/verify', null, token),
+  // ── KYC —————————————————————————————————————————————————
+  /** Step 1: Submit government ID */
+  kycSubmitId: (token, idType, idNumber) =>
+    request('POST', '/kyc/submit', { idType, idNumber }, token),
 
+  /** Step 2: Submit address proof */
+  kycSubmitAddress: (token, addressProof) =>
+    request('POST', '/kyc/address', { addressProof }, token),
+
+  /** Step 3: Submit selfie / face verification */
+  kycSubmitFace: (token, selfie) =>
+    request('POST', '/kyc/face', { selfie }, token),
+
+  /** Get full KYC status object */
   kycStatus: (token) =>
     request('GET', '/kyc/status', null, token),
 
+  // ── Transfers ────────────────────────────────────────────
   transfer: (token, body) =>
     request('POST', '/transfer', body, token),
 
+  // ── Balance ──────────────────────────────────────────────
   balance: (token, userId) =>
     request('GET', `/balance/${userId}`, null, token),
 
+  // ── Transactions ─────────────────────────────────────────
   transactions: (token, userId) =>
     request('GET', `/transactions/${userId}`, null, token),
 
+  // ── Settlement ───────────────────────────────────────────
   settlementRun: (token) =>
     request('POST', '/settlement/run', null, token),
 

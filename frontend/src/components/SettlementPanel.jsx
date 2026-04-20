@@ -2,10 +2,116 @@ import { useState, useEffect } from 'react'
 import { api } from '../api'
 import styles from './SettlementPanel.module.css'
 
+// ──────────────────────────────────────────────
+//  Settlement Status Card — reusable per batch
+// ──────────────────────────────────────────────
+function SettlementStatusCard({ batchId, status, explorerUrl, txHash, batchHash, transactionCount, totalVolume, timestamp, anchoredAt, isNew }) {
+  const isVerified = status === 'VERIFIED'
+  const displayTime = timestamp
+    ? new Date(timestamp).toLocaleTimeString()
+    : anchoredAt
+      ? new Date(anchoredAt).toLocaleTimeString()
+      : null
+
+  return (
+    <div className={`${styles.statusCard} ${isNew ? styles.statusCardNew : ''}`}>
+      {/* Top row: status badge + label */}
+      <div className={styles.scHeader}>
+        <div className={styles.scLeft}>
+          <div className={`${styles.verifiedBadge} ${isVerified ? styles.verifiedBadgeOn : styles.verifiedBadgeOff}`}>
+            {isVerified ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="8" fill="rgba(0,212,170,0.2)"/>
+                  <path d="M4.5 8.5l2.5 2.5 4.5-5" stroke="#00D4AA" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                VERIFIED ✅
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="8" fill="rgba(255,152,0,0.15)"/>
+                  <path d="M8 5v4M8 11h.01" stroke="#ff9800" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                PENDING
+              </>
+            )}
+          </div>
+          <div className={styles.scLabel}>
+            {isVerified ? 'Settlement Secured' : 'Awaiting Confirmation'}
+          </div>
+        </div>
+        {explorerUrl && (
+          <a
+            href={explorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.viewProofBtn}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              <polyline points="15 3 21 3 21 9"/>
+              <line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+            View Proof
+          </a>
+        )}
+      </div>
+
+      {/* Batch ID row */}
+      <div className={styles.scBatchRow}>
+        <span className={styles.scFieldLabel}>Batch ID</span>
+        <span className={`${styles.scBatchId} mono`} title={batchId}>
+          {batchId.length > 36 ? `${batchId.slice(0, 20)}…${batchId.slice(-12)}` : batchId}
+        </span>
+      </div>
+
+      {/* Details grid */}
+      <div className={styles.scGrid}>
+        {transactionCount !== undefined && (
+          <div className={styles.scCell}>
+            <span className={styles.scCellLabel}>Transactions</span>
+            <span className={styles.scCellValue}>{transactionCount}</span>
+          </div>
+        )}
+        {totalVolume && (
+          <div className={styles.scCell}>
+            <span className={styles.scCellLabel}>Volume</span>
+            <span className={styles.scCellValue}>
+              {Object.entries(totalVolume).map(([c, a]) => `${a} ${c}`).join(' · ')}
+            </span>
+          </div>
+        )}
+        {displayTime && (
+          <div className={styles.scCell}>
+            <span className={styles.scCellLabel}>Time</span>
+            <span className={styles.scCellValue}>{displayTime}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Proof anchor note — no raw hash shown */}
+      {isVerified && (
+        <div className={styles.scProofNote}>
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1l7 3.5v5C15 13 12 15.5 8 16 4 15.5 1 13 1 9.5v-5L8 1z"
+              stroke="#00D4AA" strokeWidth="1.2" fill="rgba(0,212,170,0.15)"/>
+            <path d="M5 8.5l2 2 4-4" stroke="#00D4AA" strokeWidth="1.3" strokeLinecap="round"/>
+          </svg>
+          Cryptographic proof anchored on Solana Devnet · Immutable · Tamper-proof
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────
+//  Main Settlement Panel
+// ──────────────────────────────────────────────
 export default function SettlementPanel({ session, addToast, queueSize, onSettled }) {
-  const [loading, setLoading]   = useState(false)
-  const [result, setResult]     = useState(null)
-  const [history, setHistory]   = useState([])
+  const [loading, setLoading]     = useState(false)
+  const [result, setResult]       = useState(null)
+  const [history, setHistory]     = useState([])
   const [loadingHist, setLoadingHist] = useState(true)
 
   const loadHistory = async () => {
@@ -29,7 +135,7 @@ export default function SettlementPanel({ session, addToast, queueSize, onSettle
     try {
       const data = await api.settlementRun(session.token)
       setResult(data)
-      addToast('Settlement batch anchored to blockchain!', 'success')
+      addToast('Settlement verified and anchored to blockchain!', 'success')
       onSettled?.()
       loadHistory()
     } catch (err) {
@@ -41,7 +147,8 @@ export default function SettlementPanel({ session, addToast, queueSize, onSettle
 
   return (
     <div className={styles.wrapper}>
-      {/* Header card */}
+
+      {/* ── Header ── */}
       <div className={styles.heroCard}>
         <div className={styles.heroLeft}>
           <div className={styles.heroIcon}>
@@ -60,7 +167,7 @@ export default function SettlementPanel({ session, addToast, queueSize, onSettle
           <div>
             <h2 className={styles.heroTitle}>Settlement Engine</h2>
             <p className={styles.heroSub}>
-              Batch transactions · Anchor to blockchain · Generate proof
+              Batch transactions · Blockchain proof · Verified on-chain
             </p>
           </div>
         </div>
@@ -71,13 +178,13 @@ export default function SettlementPanel({ session, addToast, queueSize, onSettle
         </div>
       </div>
 
-      {/* How it works */}
+      {/* ── Flow Steps ── */}
       <div className={styles.flowRow}>
         {[
           { icon: '≡', label: 'Collect', sub: 'Queue txs' },
           { icon: '⊕', label: 'Batch',   sub: 'Group all' },
           { icon: '⛓', label: 'Anchor',  sub: 'Blockchain' },
-          { icon: '✓', label: 'Proof',   sub: 'txHash' },
+          { icon: '✅', label: 'Verify',  sub: 'Proof' },
         ].map((s, i) => (
           <div key={i} className={styles.flowItem}>
             <div className={styles.flowIcon}>{s.icon}</div>
@@ -88,7 +195,7 @@ export default function SettlementPanel({ session, addToast, queueSize, onSettle
         ))}
       </div>
 
-      {/* Run button */}
+      {/* ── Run Button ── */}
       <div className={styles.runSection}>
         <button
           className={'btn btn-primary btn-lg ' + styles.runBtn}
@@ -101,67 +208,42 @@ export default function SettlementPanel({ session, addToast, queueSize, onSettle
                 stroke="currentColor" strokeWidth="2" fill="none" strokeLinejoin="round"/>
             </svg>
           )}
-          {loading ? 'Anchoring…' : queueSize === 0 ? 'No Transactions Pending' : `Run Settlement · ${queueSize} txs`}
+          {loading
+            ? 'Anchoring to Blockchain…'
+            : queueSize === 0
+              ? 'No Transactions Pending'
+              : `Run Settlement · ${queueSize} txs`}
         </button>
         {queueSize === 0 && (
           <p className={styles.hint}>Make some transfers first, then run settlement.</p>
         )}
       </div>
 
-      {/* Result */}
+      {/* ── Result: Settlement Status Card ── */}
       {result && (
-        <div className={styles.resultCard + ' animate-fade-in'}>
-          <div className={styles.resultHeader}>
-            <div className={styles.resultIconWrap}>
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <circle cx="10" cy="10" r="10" fill="rgba(0,212,170,0.2)"/>
-                <path d="M6 10l3 3 5-6" stroke="#00D4AA" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-            </div>
-            <div>
-              <div className={styles.resultTitle}>Batch Settled</div>
-              <div className={styles.resultSub}>Anchored to blockchain</div>
-            </div>
+        <div className="animate-fade-in">
+          <div className={styles.resultHeading}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="8" fill="rgba(0,212,170,0.15)"/>
+              <path d="M4.5 8.5l2.5 2.5 4.5-5" stroke="#00D4AA" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Latest Settlement
           </div>
-
-          <div className={styles.resultGrid}>
-            <div className={styles.resultItem}>
-              <span>Batch ID</span>
-              <span className="mono">{result.batchId}</span>
-            </div>
-            <div className={styles.resultItem}>
-              <span>Transactions</span>
-              <span>{result.transactionCount}</span>
-            </div>
-            <div className={styles.resultItem}>
-              <span>Total Volume</span>
-              <span>{Object.entries(result.totalVolume ?? {})
-                .map(([c,a]) => `${a} ${c}`).join(' · ')}</span>
-            </div>
-            <div className={styles.resultItem}>
-              <span>Timestamp</span>
-              <span>{new Date(result.timestamp).toLocaleTimeString()}</span>
-            </div>
-          </div>
-
-          {/* TX HASH — highlighted prominently */}
-          <div className={styles.hashBox}>
-            <div className={styles.hashLabel}>
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                <path d="M8 1l7 3.5v5C15 13 12 15.5 8 16 4 15.5 1 13 1 9.5v-5L8 1z"
-                  stroke="currentColor" strokeWidth="1.2" fill="none"/>
-              </svg>
-              Blockchain Proof Hash
-            </div>
-            <div className={styles.hash + ' mono'}>{result.txHash}</div>
-            <div className={styles.hashSub}>
-              Immutable · Tamper-proof · Verifiable
-            </div>
-          </div>
+          <SettlementStatusCard
+            batchId={result.batchId}
+            status={result.status}
+            explorerUrl={result.explorerUrl}
+            txHash={result.txHash}
+            batchHash={result.batchHash}
+            transactionCount={result.transactionCount}
+            totalVolume={result.totalVolume}
+            timestamp={result.timestamp}
+            isNew={true}
+          />
         </div>
       )}
 
-      {/* History */}
+      {/* ── Settlement History ── */}
       <div className={styles.historySection}>
         <h3 className={styles.histTitle}>Settlement History</h3>
         {loadingHist ? (
@@ -171,29 +253,28 @@ export default function SettlementPanel({ session, addToast, queueSize, onSettle
         ) : (
           <div className={styles.histList}>
             {history.map((b, i) => (
-              <div key={b.batchId} className={styles.histItem + ' animate-slide-in'}
-                style={{ animationDelay: `${i * 50}ms` }}>
-                <div className={styles.histLeft}>
-                  <div className={styles.histIcon}>⛓</div>
-                  <div>
-                    <div className={styles.histBatchId + ' mono'}>{b.batchId.slice(0, 28)}…</div>
-                    <div className={styles.histMeta}>
-                      {b.transactionCount} txs · {Object.entries(b.totalVolume ?? {})
-                        .map(([c,a]) => `${a} ${c}`).join(', ')}
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.histRight}>
-                  <div className={styles.histHash + ' mono'}>{b.txHash.slice(0, 18)}…</div>
-                  <div className={styles.histTime}>
-                    {new Date(b.anchoredAt).toLocaleTimeString()}
-                  </div>
-                </div>
+              <div
+                key={b.batchId}
+                className="animate-slide-in"
+                style={{ animationDelay: `${i * 50}ms` }}
+              >
+                <SettlementStatusCard
+                  batchId={b.batchId}
+                  status={b.status}
+                  explorerUrl={b.txHash ? `https://explorer.solana.com/tx/${b.txHash}?cluster=devnet` : null}
+                  txHash={b.txHash}
+                  batchHash={b.batchHash}
+                  transactionCount={b.transactionCount}
+                  totalVolume={b.totalVolume}
+                  anchoredAt={b.anchoredAt}
+                  isNew={false}
+                />
               </div>
             ))}
           </div>
         )}
       </div>
+
     </div>
   )
 }

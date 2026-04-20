@@ -1,58 +1,36 @@
 // ============================================================
 //  KYC MIDDLEWARE — Block Unverified Users
+//  Delegates all data operations to src/modules/kyc.ts
 // ============================================================
 
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest, KycRecord, KycStatus } from '../utils/types';
 import { logger } from '../utils/logger';
+import {
+  getKycRecord      as _getKycRecord,
+  initKycRecord     as _initKycRecord,
+  isVerified        as _isVerified,
+  seedKycVerified   as _seedKycVerified,
+} from '../modules/kyc';
 
 // ----------------------------
-//  In-Memory KYC Store
+//  Re-exports (used by routes/auth.ts and server.ts)
 // ----------------------------
-const kycStore = new Map<string, KycRecord>();
-
-// ----------------------------
-//  KYC Operations
-// ----------------------------
-
-export function setKycStatus(userId: string, status: KycStatus): void {
-  const record: KycRecord = {
-    userId,
-    status,
-    verifiedAt: status === 'verified' ? new Date() : undefined,
-  };
-  kycStore.set(userId, record);
-}
 
 export function getKycRecord(userId: string): KycRecord | undefined {
-  return kycStore.get(userId);
+  return _getKycRecord(userId);
 }
 
-export function isVerified(userId: string): boolean {
-  return kycStore.get(userId)?.status === 'verified';
-}
-
-// ----------------------------
-//  KYC Submit (registers user as pending)
-// ----------------------------
-
-export function submitKyc(userId: string): KycRecord {
-  const existing = kycStore.get(userId);
-  if (existing?.status === 'verified') {
-    return existing; // Already verified, no-op
+/** Called on login: create a PENDING record if none exists */
+export function setKycStatus(userId: string, status: KycStatus): void {
+  if (status === 'PENDING') {
+    _initKycRecord(userId);
   }
+}
 
-  // In a real system: trigger document review pipeline
-  // For demo: auto-verify after submission
-  const record: KycRecord = {
-    userId,
-    status: 'verified',
-    verifiedAt: new Date(),
-  };
-  kycStore.set(userId, record);
-
-  logger.success(`KYC verified: ${userId}`);
-  return record;
+/** Seed multiple users as fully VERIFIED (demo users) */
+export function seedKyc(userIds: string[]): void {
+  _seedKycVerified(userIds);
 }
 
 // ----------------------------
@@ -76,15 +54,14 @@ export function kycMiddleware(
     return;
   }
 
-  const record = getKycRecord(userId);
-
-  if (!record || record.status !== 'verified') {
-    logger.warn(`KYC: User not verified`, { userId, status: record?.status ?? 'unknown' });
+  if (!_isVerified(userId)) {
+    const record = _getKycRecord(userId);
+    logger.warn(`KYC: User not verified`, { userId, status: record?.status ?? 'NOT_FOUND' });
     res.status(403).json({
       success: false,
-      error: 'KYC verification required before making transactions',
+      error: 'KYC verification required before transaction',
       code: 'KYC_REQUIRED',
-      currentStatus: record?.status ?? 'not_submitted',
+      currentStatus: record?.status ?? 'PENDING',
       timestamp: new Date().toISOString(),
     });
     return;
@@ -92,15 +69,4 @@ export function kycMiddleware(
 
   logger.debug(`KYC: Passed`, { userId });
   next();
-}
-
-// ----------------------------
-//  Seed KYC for Known Users
-// ----------------------------
-
-export function seedKyc(userIds: string[]): void {
-  for (const userId of userIds) {
-    setKycStatus(userId, 'verified');
-    logger.info(`KYC seeded as verified: ${userId}`);
-  }
 }

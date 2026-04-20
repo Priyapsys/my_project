@@ -1,3 +1,7 @@
+/* ============================================================
+   KYC VIEW — Styles
+   ============================================================ */
+
 .container {
   min-height: 100vh;
   display: flex;
@@ -12,13 +16,14 @@
   border-radius: var(--radius-xl);
   padding: 40px;
   width: 100%;
-  max-width: 440px;
+  max-width: 460px;
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
   gap: 0;
 }
 
+/* ── Header ─────────────────────────────────────────────── */
 .header {
   width: 100%;
   margin-bottom: 24px;
@@ -39,6 +44,86 @@
 }
 .brand { font-size: 17px; font-weight: 700; letter-spacing: -0.03em; }
 
+/* ── Step Progress Bar ──────────────────────────────────── */
+.progressWrapper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 28px;
+  position: relative;
+}
+
+.progressStep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex: 1;
+}
+
+.stepBubble {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  transition: all 0.3s var(--ease);
+  z-index: 2;
+  position: relative;
+}
+
+.stepActive {
+  border-color: var(--teal);
+  color: var(--teal);
+  box-shadow: 0 0 0 4px rgba(0,212,170,0.12);
+  background: rgba(0,212,170,0.08);
+}
+
+.stepDone {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: white;
+}
+
+.stepLabel {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  white-space: nowrap;
+  text-align: center;
+  letter-spacing: 0.01em;
+  transition: color 0.2s;
+}
+
+.stepLabelActive {
+  color: var(--teal);
+  font-weight: 700;
+}
+
+.stepLine {
+  position: absolute;
+  top: 13px;
+  left: calc(50% + 16px);
+  right: calc(-50% + 16px);
+  height: 2px;
+  background: var(--border);
+  transition: background 0.4s var(--ease);
+  z-index: 1;
+}
+
+.stepLineDone {
+  background: var(--teal);
+}
+
+/* ── Step Body ──────────────────────────────────────────── */
 .stepContainer {
   display: flex;
   flex-direction: column;
@@ -47,9 +132,9 @@
   width: 100%;
 }
 
-.content { margin-bottom: 24px; }
+.content { margin-bottom: 20px; }
 .content h2 {
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 700;
   letter-spacing: -0.03em;
   margin-bottom: 8px;
@@ -60,12 +145,12 @@
   line-height: 1.6;
 }
 
-/* Form Styles */
+/* ── Form ──────────────────────────────────────────────── */
 .form {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   text-align: left;
 }
 
@@ -75,25 +160,35 @@
   gap: 6px;
 }
 .formGroup label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   color: var(--text-primary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .input {
   width: 100%;
-  padding: 12px 16px;
+  padding: 12px 14px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: 14px;
   transition: all 0.2s var(--ease);
+  -webkit-appearance: none;
+  appearance: none;
 }
 .input:focus {
   outline: none;
   border-color: var(--teal);
   box-shadow: 0 0 0 3px rgba(0,212,170,0.1);
+}
+
+.fileHint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: -2px;
 }
 
 .fileInput {
@@ -111,13 +206,14 @@
   border: 1px solid var(--border-active);
   border-radius: var(--radius-sm);
   color: var(--teal);
-  padding: 8px 12px;
-  margin-right: 12px;
-  font-weight: 600;
-  font-size: 12px;
+  padding: 6px 10px;
+  margin-right: 10px;
+  font-weight: 700;
+  font-size: 11px;
   cursor: pointer;
 }
 
+/* ── Liveness Button ────────────────────────────────────── */
 .livenessBtn {
   display: flex;
   align-items: center;
@@ -138,19 +234,23 @@
   background: rgba(0,136,204,0.1);
 }
 .livenessBtnDone {
-  background: rgba(16,185,129,0.1);
+  background: rgba(16,185,129,0.08);
   border-color: #10B981;
   color: #10B981;
 }
 .livenessBtnDone:hover {
-  background: rgba(16,185,129,0.15);
+  background: rgba(16,185,129,0.14);
 }
 
-.verifyBtn {
-  margin-top: 8px;
+.verifyBtn { margin-top: 6px; }
+
+.btnDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
-/* Loading State */
+/* ── Loading State ──────────────────────────────────────── */
 .loadingPulse {
   position: relative;
   width: 90px; height: 90px;
@@ -180,12 +280,12 @@
 
 @keyframes rotate { 100% { transform: rotate(360deg); } }
 @keyframes dash {
-  0% { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
-  50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
+  0%   { stroke-dasharray: 1, 150;  stroke-dashoffset: 0; }
+  50%  { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
   100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
 }
 
-/* Success State */
+/* ── Success State ──────────────────────────────────────── */
 .iconWrapDone {
   width: 80px; height: 80px;
   border-radius: 50%;
@@ -197,4 +297,5 @@
 
 @media (max-width: 600px) {
   .card { padding: 24px; margin: 16px; }
+  .stepLabel { display: none; }
 }

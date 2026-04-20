@@ -5,6 +5,7 @@
 import { Router, Request, Response } from 'express';
 import { issueToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
+import { getKycRecord, setKycStatus } from '../middleware/kyc';
 
 const router = Router();
 
@@ -22,6 +23,11 @@ router.post('/', (req: Request, res: Response): void => {
   }
 
   const cleanUserId = userId.trim().toLowerCase();
+  
+  if (!getKycRecord(cleanUserId)) {
+    setKycStatus(cleanUserId, 'PENDING');
+  }
+  
   const token = issueToken(cleanUserId);
 
   logger.info(`Login: token issued`, { userId: cleanUserId });

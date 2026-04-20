@@ -6,7 +6,7 @@ import { Router, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { runSettlement } from '../services/settlementService';
 import { getSettlementStats } from '../modules/settlement';
-import { getChainStats, getAllRecords } from '../modules/blockchain';
+import { getChainStats, getAllRecords } from '../services/blockchainService';
 import { AuthenticatedRequest } from '../utils/types';
 import { logger } from '../utils/logger';
 
@@ -22,6 +22,10 @@ router.post('/run', authMiddleware, async (req: AuthenticatedRequest, res: Respo
       data: {
         batchId:          result.batchId,
         txHash:           result.txHash,
+        batchHash:        result.batchHash,
+        status:           result.txHash ? 'VERIFIED' : 'PENDING',
+        settlementLabel:  result.txHash ? 'Settlement Secured' : 'Awaiting Confirmation',
+        explorerUrl:      result.explorerUrl ?? (result.txHash ? `https://explorer.solana.com/tx/${result.txHash}?cluster=devnet` : null),
         transactionCount: result.transactionCount,
         totalVolume:      result.totalVolume,
         timestamp:        result.timestamp,
@@ -69,6 +73,8 @@ router.get('/history', authMiddleware, (req: AuthenticatedRequest, res: Response
       batches: records.map((r) => ({
         batchId:          r.batchId,
         txHash:           r.txHash,
+        batchHash:        r.batchHash,
+        status:           r.txHash ? 'VERIFIED' : 'PENDING',
         transactionCount: r.batch.transactionCount,
         totalVolume:      r.batch.totalVolume,
         anchoredAt:       r.anchoredAt.toISOString(),

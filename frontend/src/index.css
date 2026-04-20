@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 /* ================================================================
    GLOBALPAY — Design System
    Dark fintech theme · Teal accent · Inter typography
@@ -94,9 +96,10 @@ input, select {
   outline: none;
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
   -webkit-appearance: none;
+  appearance: none;
 }
 
-input::placeholder { color: var(--text-muted); }
+input::placeholder { color: var(--text-secondary); }
 input:focus, select:focus {
   border-color: var(--teal);
   background: var(--bg-card);

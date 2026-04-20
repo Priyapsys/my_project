@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { api } from './api'
 import LoginView from './components/LoginView'
 import KycView from './components/KycView'
 import Dashboard from './components/Dashboard'
@@ -15,10 +16,18 @@ export default function App() {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000)
   }, [])
 
-  const handleLogin = (userId, token) => {
+  const handleLogin = async (userId, token) => {
     setSession({ userId, token })
-    setView('kyc')
     addToast(`Welcome, ${userId}!`, 'success')
+    // Check if already KYC-verified, skip KYC form if so
+    try {
+      const kyc = await api.kycStatus(token)
+      if (kyc.status === 'VERIFIED') {
+        setView('dashboard')
+        return
+      }
+    } catch { /* fallthrough to kyc */ }
+    setView('kyc')
   }
 
   const handleKycDone = () => {

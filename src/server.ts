@@ -108,7 +108,7 @@ app.get('/api', (_req: Request, res: Response) => {
     version: '1.0.0',
     endpoints: {
       auth:        'POST /api/login',
-      kyc:         'POST /api/kyc/verify | GET /api/kyc/status',
+      kyc:         'POST /api/kyc/submit | POST /api/kyc/address | POST /api/kyc/face | GET /api/kyc/status',
       transfer:    'POST /api/transfer',
       settlement:  'POST /api/settlement/run | GET /api/settlement/status | GET /api/settlement/history',
       balance:     'GET /api/balance/:userId | GET /api/balance',
