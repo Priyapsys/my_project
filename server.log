@@ -1,0 +1,488 @@
+
+> global-payment-system@1.0.0 dev
+> ts-node-dev --respawn --transpile-only src/server.ts
+
+[INFO] 23:02:38 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.9.2, typescript ver. 5.9.3)
+[90m2026-04-20T17:32:38.560Z[0m [34m[1m[CHAIN  ][0m [34m⛓  Loaded persistent wallet from disk: DqA9nDnkbeecEopVBjRZrvaHNHa5fZMr5VLkzr2FbM4Y[0m
+[36m════════════════════════════════════════════════════════════[0m
+[36m[1m  Seeding Initial System State[0m
+[36m════════════════════════════════════════════════════════════[0m
+[90m2026-04-20T17:32:38.583Z[0m [36m[1m[INFO   ][0m [36mToken pre-issued for: alice → token-alice[0m
+[90m2026-04-20T17:32:38.583Z[0m [36m[1m[INFO   ][0m [36mToken pre-issued for: bob → token-bob[0m
+[90m2026-04-20T17:32:38.583Z[0m [36m[1m[INFO   ][0m [36mToken pre-issued for: charlie → token-charlie[0m
+[90m2026-04-20T17:32:38.583Z[0m [36m[1m[INFO   ][0m [36mToken pre-issued for: diana → token-diana[0m
+[90m2026-04-20T17:32:38.583Z[0m [36m[1m[INFO   ][0m [36mToken pre-issued for: eve → token-eve[0m
+[90m2026-04-20T17:32:38.583Z[0m [36m[1m[INFO   ][0m [36mKYC seeded as VERIFIED: alice[0m
+[90m2026-04-20T17:32:38.584Z[0m [36m[1m[INFO   ][0m [36mKYC seeded as VERIFIED: bob[0m
+[90m2026-04-20T17:32:38.584Z[0m [36m[1m[INFO   ][0m [36mKYC seeded as VERIFIED: charlie[0m
+[90m2026-04-20T17:32:38.584Z[0m [36m[1m[INFO   ][0m [36mKYC seeded as VERIFIED: diana[0m
+[90m2026-04-20T17:32:38.584Z[0m [36m[1m[INFO   ][0m [36mKYC seeded as VERIFIED: eve[0m
+[90m2026-04-20T17:32:38.584Z[0m [36m[1m[INFO   ][0m [36mSeeded balance: alice → 10000 USD[0m
+[90m2026-04-20T17:32:38.584Z[0m [36m[1m[INFO   ][0m [36mSeeded balance: alice → 2000 GBP[0m
+[90m2026-04-20T17:32:38.584Z[0m [36m[1m[INFO   ][0m [36mSeeded balance: bob → 500000 INR[0m
+[90m2026-04-20T17:32:38.584Z[0m [36m[1m[INFO   ][0m [36mSeeded balance: bob → 1000 USD[0m
+[90m2026-04-20T17:32:38.585Z[0m [36m[1m[INFO   ][0m [36mSeeded balance: charlie → 5000 USD[0m
+[90m2026-04-20T17:32:38.585Z[0m [36m[1m[INFO   ][0m [36mSeeded balance: charlie → 3000 EUR[0m
+[90m2026-04-20T17:32:38.585Z[0m [36m[1m[INFO   ][0m [36mSeeded balance: diana → 50000 AED[0m
+[90m2026-04-20T17:32:38.585Z[0m [36m[1m[INFO   ][0m [36mSeeded balance: diana → 200000 INR[0m
+[90m2026-04-20T17:32:38.585Z[0m [36m[1m[INFO   ][0m [36mSeeded balance: eve → 8000 GBP[0m
+[90m2026-04-20T17:32:38.585Z[0m [36m[1m[INFO   ][0m [36mSeeded balance: eve → 1000000 JPY[0m
+[90m2026-04-20T17:32:38.585Z[0m [36m[1m[INFO   ][0m [36mTreasury seeded: 1000000 USD[0m
+[90m2026-04-20T17:32:38.585Z[0m [36m[1m[INFO   ][0m [36mTreasury seeded: 50000000 INR[0m
+[90m2026-04-20T17:32:38.585Z[0m [36m[1m[INFO   ][0m [36mTreasury seeded: 500000 GBP[0m
+[90m2026-04-20T17:32:38.585Z[0m [36m[1m[INFO   ][0m [36mTreasury seeded: 800000 EUR[0m
+[90m2026-04-20T17:32:38.585Z[0m [36m[1m[INFO   ][0m [36mTreasury seeded: 2000000 AED[0m
+[90m2026-04-20T17:32:38.585Z[0m [36m[1m[INFO   ][0m [36mTreasury seeded: 80000000 JPY[0m
+[36m════════════════════════════════════════════════════════════[0m
+[36m[1m  System Ready[0m
+[36m════════════════════════════════════════════════════════════[0m
+[90m2026-04-20T17:32:38.588Z[0m [32m[1m[SUCCESS][0m [32mServer running on http://localhost:3000[0m
+[90m2026-04-20T17:32:38.588Z[0m [36m[1m[INFO   ][0m [36mAPI index: http://localhost:3000/api[0m
+[90m2026-04-20T17:32:38.588Z[0m [36m[1m[INFO   ][0m [36mHealth check: http://localhost:3000/health[0m
+[90m2026-04-20T17:36:46.811Z[0m [36m[1m[INFO   ][0m [36m→ GET /[0m
+[90m2026-04-20T17:36:46.845Z[0m [36m[1m[INFO   ][0m [36m→ GET /favicon.ico[0m
+[90m2026-04-20T17:39:37.507Z[0m [36m[1m[INFO   ][0m [36m→ GET /api/settlement/history[0m
+[90m2026-04-20T17:39:37.508Z[0m [33m[1m[WARN   ][0m [33mAuth: Missing or malformed Authorization header[0m
+         {
+           "path": "/history",
+           "ip": "::1"
+         }
+[90m2026-04-20T17:40:29.518Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/login[0m
+[90m2026-04-20T17:40:29.519Z[0m [36m[1m[INFO   ][0m [36mLogin: token issued[0m
+         {
+           "userId": "alice"
+         }
+[90m2026-04-20T17:40:29.570Z[0m [36m[1m[INFO   ][0m [36m→ GET /api/settlement/history[0m
+[90m2026-04-20T17:40:29.571Z[0m [35m[1m[DEBUG  ][0m [35mAuth: Validated[0m
+         {
+           "userId": "alice",
+           "path": "/history"
+         }
+[90m2026-04-20T17:40:44.342Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/login[0m
+[90m2026-04-20T17:40:44.342Z[0m [36m[1m[INFO   ][0m [36mLogin: token issued[0m
+         {
+           "userId": "alice"
+         }
+[90m2026-04-20T17:40:44.380Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/transfer[0m
+[90m2026-04-20T17:40:44.380Z[0m [35m[1m[DEBUG  ][0m [35mAuth: Validated[0m
+         {
+           "userId": "alice",
+           "path": "/"
+         }
+[90m2026-04-20T17:40:44.380Z[0m [35m[1m[DEBUG  ][0m [35mKYC: Passed[0m
+         {
+           "userId": "alice"
+         }
+[90m────────────────────────────────────────────────────────────────────────────────[0m
+[90m2026-04-20T17:40:44.381Z[0m [92m[1m[TX     ][0m [92m💸 Transfer initiated[0m
+         {
+           "amount": 50,
+           "pair": "undefined→undefined"
+         }
+[90m2026-04-20T17:40:44.381Z[0m [31m[1m[ERROR  ][0m [31mTransfer failed[0m
+         {
+           "error": "VALIDATION: senderId is required",
+           "userId": "alice"
+         }
+[90m2026-04-20T17:40:44.417Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/transfer[0m
+[90m2026-04-20T17:40:44.418Z[0m [35m[1m[DEBUG  ][0m [35mAuth: Validated[0m
+         {
+           "userId": "alice",
+           "path": "/"
+         }
+[90m2026-04-20T17:40:44.418Z[0m [35m[1m[DEBUG  ][0m [35mKYC: Passed[0m
+         {
+           "userId": "alice"
+         }
+[90m────────────────────────────────────────────────────────────────────────────────[0m
+[90m2026-04-20T17:40:44.418Z[0m [92m[1m[TX     ][0m [92m💸 Transfer initiated[0m
+         {
+           "amount": 25,
+           "pair": "undefined→undefined"
+         }
+[90m2026-04-20T17:40:44.418Z[0m [31m[1m[ERROR  ][0m [31mTransfer failed[0m
+         {
+           "error": "VALIDATION: senderId is required",
+           "userId": "alice"
+         }
+[90m2026-04-20T17:40:44.457Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/settlement/run[0m
+[90m2026-04-20T17:40:44.457Z[0m [35m[1m[DEBUG  ][0m [35mAuth: Validated[0m
+         {
+           "userId": "alice",
+           "path": "/run"
+         }
+[90m────────────────────────────────────────────────────────────────────────────────[0m
+[90m2026-04-20T17:40:44.458Z[0m [33m[1m[SETTLE ][0m [33m📦 Settlement run triggered[0m
+         {
+           "queueSize": 0
+         }
+[90m2026-04-20T17:40:44.458Z[0m [31m[1m[ERROR  ][0m [31mSettlement run failed[0m
+         {
+           "error": "EMPTY_QUEUE: No transactions waiting for settlement"
+         }
+[90m2026-04-20T17:40:56.992Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/login[0m
+[90m2026-04-20T17:40:56.992Z[0m [36m[1m[INFO   ][0m [36mLogin: token issued[0m
+         {
+           "userId": "alice"
+         }
+[90m2026-04-20T17:40:57.029Z[0m [36m[1m[INFO   ][0m [36m→ GET /api/kyc/status[0m
+[90m2026-04-20T17:40:57.030Z[0m [35m[1m[DEBUG  ][0m [35mAuth: Validated[0m
+         {
+           "userId": "alice",
+           "path": "/status"
+         }
+[90m2026-04-20T17:40:57.083Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/transfer[0m
+[90m2026-04-20T17:40:57.083Z[0m [35m[1m[DEBUG  ][0m [35mAuth: Validated[0m
+         {
+           "userId": "alice",
+           "path": "/"
+         }
+[90m2026-04-20T17:40:57.083Z[0m [35m[1m[DEBUG  ][0m [35mKYC: Passed[0m
+         {
+           "userId": "alice"
+         }
+[90m────────────────────────────────────────────────────────────────────────────────[0m
+[90m2026-04-20T17:40:57.083Z[0m [92m[1m[TX     ][0m [92m💸 Transfer initiated[0m
+         {
+           "amount": 50,
+           "pair": "undefined→undefined"
+         }
+[90m2026-04-20T17:40:57.084Z[0m [31m[1m[ERROR  ][0m [31mTransfer failed[0m
+         {
+           "error": "VALIDATION: senderId is required",
+           "userId": "alice"
+         }
+[90m2026-04-20T17:41:16.562Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/login[0m
+[90m2026-04-20T17:41:16.562Z[0m [36m[1m[INFO   ][0m [36mLogin: token issued[0m
+         {
+           "userId": "alice"
+         }
+[90m2026-04-20T17:41:16.610Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/transfer[0m
+[90m2026-04-20T17:41:16.610Z[0m [35m[1m[DEBUG  ][0m [35mAuth: Validated[0m
+         {
+           "userId": "alice",
+           "path": "/"
+         }
+[90m2026-04-20T17:41:16.610Z[0m [35m[1m[DEBUG  ][0m [35mKYC: Passed[0m
+         {
+           "userId": "alice"
+         }
+[90m────────────────────────────────────────────────────────────────────────────────[0m
+[90m2026-04-20T17:41:16.610Z[0m [92m[1m[TX     ][0m [92m💸 Transfer initiated[0m
+         {
+           "from": "alice",
+           "to": "bob",
+           "amount": 50,
+           "pair": "undefined→undefined"
+         }
+[90m2026-04-20T17:41:16.611Z[0m [31m[1m[ERROR  ][0m [31mTransfer failed[0m
+         {
+           "error": "VALIDATION: sourceCurrency is required",
+           "userId": "alice"
+         }
+[90m2026-04-20T17:41:16.659Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/transfer[0m
+[90m2026-04-20T17:41:16.659Z[0m [35m[1m[DEBUG  ][0m [35mAuth: Validated[0m
+         {
+           "userId": "alice",
+           "path": "/"
+         }
+[90m2026-04-20T17:41:16.659Z[0m [35m[1m[DEBUG  ][0m [35mKYC: Passed[0m
+         {
+           "userId": "alice"
+         }
+[90m────────────────────────────────────────────────────────────────────────────────[0m
+[90m2026-04-20T17:41:16.659Z[0m [92m[1m[TX     ][0m [92m💸 Transfer initiated[0m
+         {
+           "from": "alice",
+           "to": "bob",
+           "amount": 30,
+           "pair": "undefined→undefined"
+         }
+[90m2026-04-20T17:41:16.659Z[0m [31m[1m[ERROR  ][0m [31mTransfer failed[0m
+         {
+           "error": "VALIDATION: sourceCurrency is required",
+           "userId": "alice"
+         }
+[90m2026-04-20T17:41:16.725Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/settlement/run[0m
+[90m2026-04-20T17:41:16.725Z[0m [35m[1m[DEBUG  ][0m [35mAuth: Validated[0m
+         {
+           "userId": "alice",
+           "path": "/run"
+         }
+[90m────────────────────────────────────────────────────────────────────────────────[0m
+[90m2026-04-20T17:41:16.726Z[0m [33m[1m[SETTLE ][0m [33m📦 Settlement run triggered[0m
+         {
+           "queueSize": 0
+         }
+[90m2026-04-20T17:41:16.726Z[0m [31m[1m[ERROR  ][0m [31mSettlement run failed[0m
+         {
+           "error": "EMPTY_QUEUE: No transactions waiting for settlement"
+         }
+[90m2026-04-20T17:41:27.461Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/login[0m
+[90m2026-04-20T17:41:27.461Z[0m [36m[1m[INFO   ][0m [36mLogin: token issued[0m
+         {
+           "userId": "alice"
+         }
+[90m2026-04-20T17:41:40.375Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/transfer[0m
+[90m2026-04-20T17:41:40.375Z[0m [35m[1m[DEBUG  ][0m [35mAuth: Validated[0m
+         {
+           "userId": "alice",
+           "path": "/"
+         }
+[90m2026-04-20T17:41:40.375Z[0m [35m[1m[DEBUG  ][0m [35mKYC: Passed[0m
+         {
+           "userId": "alice"
+         }
+[90m────────────────────────────────────────────────────────────────────────────────[0m
+[90m2026-04-20T17:41:40.375Z[0m [92m[1m[TX     ][0m [92m💸 Transfer initiated[0m
+         {
+           "from": "alice",
+           "to": "bob",
+           "amount": 50,
+           "pair": "undefined→undefined"
+         }
+[90m2026-04-20T17:41:40.376Z[0m [31m[1m[ERROR  ][0m [31mTransfer failed[0m
+         {
+           "error": "VALIDATION: sourceCurrency is required",
+           "userId": "alice"
+         }
+[90m2026-04-20T17:41:40.448Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/transfer[0m
+[90m2026-04-20T17:41:40.448Z[0m [35m[1m[DEBUG  ][0m [35mAuth: Validated[0m
+         {
+           "userId": "alice",
+           "path": "/"
+         }
+[90m2026-04-20T17:41:40.448Z[0m [35m[1m[DEBUG  ][0m [35mKYC: Passed[0m
+         {
+           "userId": "alice"
+         }
+[90m────────────────────────────────────────────────────────────────────────────────[0m
+[90m2026-04-20T17:41:40.448Z[0m [92m[1m[TX     ][0m [92m💸 Transfer initiated[0m
+         {
+           "from": "alice",
+           "to": "bob",
+           "amount": 20,
+           "pair": "undefined→undefined"
+         }
+[90m2026-04-20T17:41:40.448Z[0m [31m[1m[ERROR  ][0m [31mTransfer failed[0m
+         {
+           "error": "VALIDATION: sourceCurrency is required",
+           "userId": "alice"
+         }
+[90m2026-04-20T17:41:58.891Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/transfer[0m
+[90m2026-04-20T17:41:58.891Z[0m [35m[1m[DEBUG  ][0m [35mAuth: Validated[0m
+         {
+           "userId": "alice",
+           "path": "/"
+         }
+[90m2026-04-20T17:41:58.891Z[0m [35m[1m[DEBUG  ][0m [35mKYC: Passed[0m
+         {
+           "userId": "alice"
+         }
+[90m────────────────────────────────────────────────────────────────────────────────[0m
+[90m2026-04-20T17:41:58.891Z[0m [92m[1m[TX     ][0m [92m💸 Transfer initiated[0m
+         {
+           "from": "alice",
+           "to": "bob",
+           "amount": 50,
+           "pair": "USD→USD"
+         }
+[90m2026-04-20T17:41:58.892Z[0m [35m[1m[DEBUG  ][0m [35mCompliance PASSED[0m
+         {
+           "userId": "alice",
+           "score": 40
+         }
+[90m2026-04-20T17:41:58.892Z[0m [35m[1m[DEBUG  ][0m [35mFX conversion[0m
+         {
+           "pair": "USD/USD",
+           "rate": 1,
+           "amount": 50,
+           "convertedAmount": 50
+         }
+[90m2026-04-20T17:41:58.892Z[0m [35m[1m[DEBUG  ][0m [35mFX rate applied[0m
+         {
+           "pair": "USD/USD",
+           "rate": 1
+         }
+[90m2026-04-20T17:41:58.892Z[0m [35m[1m[DEBUG  ][0m [35mLedger balance updated[0m
+         {
+           "userId": "alice",
+           "currency": "USD",
+           "delta": -50,
+           "newBalance": 9950
+         }
+[90m2026-04-20T17:41:58.892Z[0m [35m[1m[DEBUG  ][0m [35mLedger balance updated[0m
+         {
+           "userId": "bob",
+           "currency": "USD",
+           "delta": 50,
+           "newBalance": 1050
+         }
+[90m2026-04-20T17:41:58.892Z[0m [92m[1m[TX     ][0m [92m💸 Ledger updated[0m
+         {
+           "debit": "alice -50 USD",
+           "credit": "bob +50 USD"
+         }
+[90m2026-04-20T17:41:58.892Z[0m [35m[1m[DEBUG  ][0m [35mTreasury reserve added[0m
+         {
+           "currency": "USD",
+           "amount": 50,
+           "newTotal": 1000000
+         }
+[90m2026-04-20T17:41:58.893Z[0m [92m[1m[TX     ][0m [92m💸 Transaction stored[0m
+         {
+           "txId": "TX-1776706918892-3415CBB9",
+           "status": "completed"
+         }
+[90m2026-04-20T17:41:58.893Z[0m [33m[1m[SETTLE ][0m [33m📦 Transaction enqueued → queue size: 1[0m
+         {
+           "txId": "TX-1776706918892-3415CBB9",
+           "sender": "alice",
+           "receiver": "bob"
+         }
+[90m2026-04-20T17:41:58.893Z[0m [32m[1m[SUCCESS][0m [32mTransfer complete[0m
+         {
+           "txId": "TX-1776706918892-3415CBB9"
+         }
+[90m────────────────────────────────────────────────────────────────────────────────[0m
+[90m2026-04-20T17:41:58.966Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/transfer[0m
+[90m2026-04-20T17:41:58.967Z[0m [35m[1m[DEBUG  ][0m [35mAuth: Validated[0m
+         {
+           "userId": "alice",
+           "path": "/"
+         }
+[90m2026-04-20T17:41:58.967Z[0m [35m[1m[DEBUG  ][0m [35mKYC: Passed[0m
+         {
+           "userId": "alice"
+         }
+[90m────────────────────────────────────────────────────────────────────────────────[0m
+[90m2026-04-20T17:41:58.967Z[0m [92m[1m[TX     ][0m [92m💸 Transfer initiated[0m
+         {
+           "from": "alice",
+           "to": "bob",
+           "amount": 20,
+           "pair": "USD→USD"
+         }
+[90m2026-04-20T17:41:58.967Z[0m [35m[1m[DEBUG  ][0m [35mCompliance PASSED[0m
+         {
+           "userId": "alice",
+           "score": 40
+         }
+[90m2026-04-20T17:41:58.967Z[0m [35m[1m[DEBUG  ][0m [35mFX conversion[0m
+         {
+           "pair": "USD/USD",
+           "rate": 1,
+           "amount": 20,
+           "convertedAmount": 20
+         }
+[90m2026-04-20T17:41:58.967Z[0m [35m[1m[DEBUG  ][0m [35mFX rate applied[0m
+         {
+           "pair": "USD/USD",
+           "rate": 1
+         }
+[90m2026-04-20T17:41:58.967Z[0m [35m[1m[DEBUG  ][0m [35mLedger balance updated[0m
+         {
+           "userId": "alice",
+           "currency": "USD",
+           "delta": -20,
+           "newBalance": 9930
+         }
+[90m2026-04-20T17:41:58.967Z[0m [35m[1m[DEBUG  ][0m [35mLedger balance updated[0m
+         {
+           "userId": "bob",
+           "currency": "USD",
+           "delta": 20,
+           "newBalance": 1070
+         }
+[90m2026-04-20T17:41:58.967Z[0m [92m[1m[TX     ][0m [92m💸 Ledger updated[0m
+         {
+           "debit": "alice -20 USD",
+           "credit": "bob +20 USD"
+         }
+[90m2026-04-20T17:41:58.967Z[0m [35m[1m[DEBUG  ][0m [35mTreasury reserve added[0m
+         {
+           "currency": "USD",
+           "amount": 20,
+           "newTotal": 1000000
+         }
+[90m2026-04-20T17:41:58.967Z[0m [92m[1m[TX     ][0m [92m💸 Transaction stored[0m
+         {
+           "txId": "TX-1776706918967-007AA8E2",
+           "status": "completed"
+         }
+[90m2026-04-20T17:41:58.967Z[0m [33m[1m[SETTLE ][0m [33m📦 Transaction enqueued → queue size: 2[0m
+         {
+           "txId": "TX-1776706918967-007AA8E2",
+           "sender": "alice",
+           "receiver": "bob"
+         }
+[90m2026-04-20T17:41:58.967Z[0m [32m[1m[SUCCESS][0m [32mTransfer complete[0m
+         {
+           "txId": "TX-1776706918967-007AA8E2"
+         }
+[90m────────────────────────────────────────────────────────────────────────────────[0m
+[90m2026-04-20T17:41:59.040Z[0m [36m[1m[INFO   ][0m [36m→ POST /api/settlement/run[0m
+[90m2026-04-20T17:41:59.040Z[0m [35m[1m[DEBUG  ][0m [35mAuth: Validated[0m
+         {
+           "userId": "alice",
+           "path": "/run"
+         }
+[90m────────────────────────────────────────────────────────────────────────────────[0m
+[90m2026-04-20T17:41:59.040Z[0m [33m[1m[SETTLE ][0m [33m📦 Settlement run triggered[0m
+         {
+           "queueSize": 2
+         }
+[90m2026-04-20T17:41:59.040Z[0m [33m[1m[SETTLE ][0m [33m📦 Queue flushed → 2 transactions drained[0m
+[90m2026-04-20T17:41:59.040Z[0m [33m[1m[SETTLE ][0m [33m📦 Drained 2 transactions from queue[0m
+[90m2026-04-20T17:41:59.041Z[0m [33m[1m[SETTLE ][0m [33m📦 Batch #1 created[0m
+         {
+           "batchId": "BATCH-1776706919040-1DCFE160",
+           "transactionCount": 2,
+           "totalVolume": {
+             "USD": 70
+           },
+           "nettedPositions": 2
+         }
+[90m2026-04-20T17:41:59.041Z[0m [34m[1m[CHAIN  ][0m [34m⛓  batchHash: c522fc194c3ee7f0bde426984f4e29e8d16fbb94fe7e4522bc806128dbecca8e[0m
+[90m2026-04-20T17:41:59.041Z[0m [34m[1m[CHAIN  ][0m [34m⛓  Preparing to anchor batch on Solana Devnet...[0m
+[90m2026-04-20T17:41:59.041Z[0m [34m[1m[CHAIN  ][0m [34m⛓  Using persistent wallet: DqA9nDnkbeecEopVBjRZrvaHNHa5fZMr5VLkzr2FbM4Y[0m
+[90m2026-04-20T17:41:59.769Z[0m [34m[1m[CHAIN  ][0m [34m⛓  Balance low (0.0000 SOL). Requesting airdrop...[0m
+[90m2026-04-20T17:41:59.769Z[0m [34m[1m[CHAIN  ][0m [34m⛓  Requesting airdrop (1 SOL) - Attempt 1...[0m
+[90m2026-04-20T17:42:00.331Z[0m [33m[1m[WARN   ][0m [33m[BlockchainService] Airdrop attempt 1 failed: airdrop to DqA9nDnkbeecEopVBjRZrvaHNHa5fZMr5VLkzr2FbM4Y failed: Internal error[0m
+[90m2026-04-20T17:42:00.331Z[0m [34m[1m[CHAIN  ][0m [34m⛓  Waiting 2 seconds before retry...[0m
+[90m2026-04-20T17:42:02.332Z[0m [34m[1m[CHAIN  ][0m [34m⛓  Requesting airdrop (1 SOL) - Attempt 2...[0m
+Server responded with 429 Too Many Requests.  Retrying after 500ms delay...
+Server responded with 429 Too Many Requests.  Retrying after 1000ms delay...
+Server responded with 429 Too Many Requests.  Retrying after 2000ms delay...
+Server responded with 429 Too Many Requests.  Retrying after 4000ms delay...
+[90m2026-04-20T17:42:12.414Z[0m [33m[1m[WARN   ][0m [33m[BlockchainService] Airdrop attempt 2 failed: 429 Too Many Requests:  {"jsonrpc":"2.0","error":{"code": 429, "message":"You've either reached your airdrop limit today or the airdrop faucet has run dry. Please visit https://faucet.solana.com for alternate sources of test SOL"}, "id": "1ed15b8e-413b-44bf-bebf-7ae9b417c680" } 
+[0m
+[90m2026-04-20T17:42:12.414Z[0m [34m[1m[CHAIN  ][0m [34m⛓  Waiting 2 seconds before retry...[0m
+[90m2026-04-20T17:42:14.416Z[0m [34m[1m[CHAIN  ][0m [34m⛓  Requesting airdrop (1 SOL) - Attempt 3...[0m
+Server responded with 429 Too Many Requests.  Retrying after 500ms delay...
+Server responded with 429 Too Many Requests.  Retrying after 1000ms delay...
+Server responded with 429 Too Many Requests.  Retrying after 2000ms delay...
+Server responded with 429 Too Many Requests.  Retrying after 4000ms delay...
+[90m2026-04-20T17:42:24.894Z[0m [33m[1m[WARN   ][0m [33m[BlockchainService] Airdrop attempt 3 failed: 429 Too Many Requests:  {"jsonrpc":"2.0","error":{"code": 429, "message":"You've either reached your airdrop limit today or the airdrop faucet has run dry. Please visit https://faucet.solana.com for alternate sources of test SOL"}, "id": "f089e1d7-d05d-43d4-895e-5dfe0e622dad" } 
+[0m
+[90m2026-04-20T17:42:24.894Z[0m [33m[1m[WARN   ][0m [33m[BlockchainService] Airdrop failed. Transaction may fail if balance is insufficient.[0m
+[90m2026-04-20T17:42:25.460Z[0m [34m[1m[CHAIN  ][0m [34m⛓  Sending batch BATCH-1776706919040-1DCFE160 (2 txs) to Solana Devnet...[0m
+[90m2026-04-20T17:42:26.222Z[0m [33m[1m[WARN   ][0m [33m[BlockchainService] Blockchain anchoring error: Simulation failed. 
+Message: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit.. 
+Logs: 
+[]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.[0m
+[90m2026-04-20T17:42:26.223Z[0m [33m[1m[WARN   ][0m [33m[BlockchainService] Batch proof was not anchored due to network/fund errors.[0m
+[90m2026-04-20T17:42:26.223Z[0m [33m[1m[SETTLE ][0m [33m📦 Tagged 2 transactions with batchId: BATCH-1776706919040-1DCFE160[0m
+[90m2026-04-20T17:42:26.223Z[0m [32m[1m[SUCCESS][0m [32mSettlement complete[0m
+         {
+           "batchId": "BATCH-1776706919040-1DCFE160",
+           "txHash": null,
+           "batchHash": "c522fc194c3ee7f0bde426984f4e29e8d16fbb94fe7e4522bc806128dbecca8e",
+           "explorerUrl": null,
+           "transactionCount": 2,
+           "totalVolume": {
+             "USD": 70
+           }
+         }
+[90m────────────────────────────────────────────────────────────────────────────────[0m

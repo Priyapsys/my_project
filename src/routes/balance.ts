@@ -10,7 +10,7 @@ import { AuthenticatedRequest } from '../utils/types';
 const router = Router();
 
 // GET /api/balance/:userId
-router.get('/:userId', authMiddleware, (req: AuthenticatedRequest, res: Response): void => {
+router.get('/:userId', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const { userId } = req.params;
 
   if (!userId) {
@@ -23,7 +23,7 @@ router.get('/:userId', authMiddleware, (req: AuthenticatedRequest, res: Response
     return;
   }
 
-  const balances = getBalance(userId);
+  const balances = await getBalance(userId);
 
   res.status(200).json({
     success: true,
@@ -37,8 +37,8 @@ router.get('/:userId', authMiddleware, (req: AuthenticatedRequest, res: Response
 });
 
 // GET /api/balance — all users (admin/debug)
-router.get('/', authMiddleware, (req: AuthenticatedRequest, res: Response): void => {
-  const snapshot = getLedgerSnapshot();
+router.get('/', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const snapshot = await getLedgerSnapshot();
 
   res.status(200).json({
     success: true,

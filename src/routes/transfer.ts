@@ -5,8 +5,10 @@
 import { Router, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { kycMiddleware } from '../middleware/kyc';
+import { idempotencyMiddleware } from '../middleware/idempotency';
 import { executeTransfer } from '../services/transactionService';
 import { AuthenticatedRequest, TransferRequestBody } from '../utils/types';
+import { DomainError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
 const router = Router();
@@ -15,6 +17,7 @@ router.post(
   '/',
   authMiddleware,
   kycMiddleware,
+  idempotencyMiddleware,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const body = req.body as TransferRequestBody;
@@ -29,7 +32,11 @@ router.post(
       const message = err instanceof Error ? err.message : 'Transfer failed';
       logger.error(`Transfer failed`, { error: message, userId: req.userId });
 
-      const code = message.split(':')[0] ?? 'TRANSFER_ERROR';
+      // Use typed error code if available, fall back to string parsing
+      const code = err instanceof DomainError
+        ? err.code
+        : (message.split(':')[0] ?? 'TRANSFER_ERROR');
+
       const statusMap: Record<string, number> = {
         COMPLIANCE_BLOCKED:      403,
         KYC_REQUIRED:            403,
@@ -37,7 +44,8 @@ router.post(
         INSUFFICIENT_FUNDS:      400,
         INSUFFICIENT_LIQUIDITY:  400,
         VALIDATION:              400,
-        FX_UNSUPPORTED:          400,
+        FX_ERROR:                400,
+        LEDGER_WRITE_ERROR:      500,
       };
 
       res.status(statusMap[code] ?? 500).json({

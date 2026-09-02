@@ -4,16 +4,18 @@
 
 import { Router, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
+import { idempotencyMiddleware } from '../middleware/idempotency';
 import { runSettlement } from '../services/settlementService';
 import { getSettlementStats } from '../modules/settlement';
-import { getChainStats, getAllRecords } from '../services/blockchainService';
+import { getChainStats, getAllRecords, verifyBatchOnChain, hashBatchData } from '../services/blockchainService';
 import { AuthenticatedRequest } from '../utils/types';
+import { getSettlementBatch } from '../modules/ledger';
 import { logger } from '../utils/logger';
 
 const router = Router();
 
 // POST /api/settlement/run — trigger batch settlement
-router.post('/run', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.post('/run', authMiddleware, idempotencyMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const result = await runSettlement();
 
@@ -82,6 +84,63 @@ router.get('/history', authMiddleware, (req: AuthenticatedRequest, res: Response
     },
     timestamp: new Date().toISOString(),
   });
+});
+
+// GET /api/settlement/:batchId/verify — verify on-chain memo
+router.get('/:batchId/verify', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { batchId } = req.params;
+    const batch = await getSettlementBatch(batchId);
+    
+    if (!batch) {
+      res.status(404).json({ success: false, error: 'Batch not found', code: 'NOT_FOUND', timestamp: new Date().toISOString() });
+      return;
+    }
+    
+    const isValid = await verifyBatchOnChain(batchId, batch.batch_hash);
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        batchId,
+        batchHash: batch.batch_hash,
+        txHash: batch.tx_hash,
+        verified: isValid,
+        message: isValid ? 'Batch signature matches on-chain record.' : 'Batch signature verification failed.',
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Verification failed';
+    res.status(500).json({
+      success: false,
+      error: message,
+      code: 'VERIFY_ERROR',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// POST /api/settlement/reconcile — reconcile pending batches
+router.post('/reconcile', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { reconcilePendingBatches } = await import('../services/blockchainService');
+    const result = await reconcilePendingBatches();
+    
+    res.status(200).json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Reconciliation failed';
+    res.status(500).json({
+      success: false,
+      error: message,
+      code: 'RECONCILE_ERROR',
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 export default router;

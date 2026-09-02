@@ -5,6 +5,9 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { logger } from './utils/logger';
 
+// ── Database ────────────────────────────────────────────────
+import { initDatabase, closeDatabase } from './db/connection';
+
 // ── Routes ──────────────────────────────────────────────────
 import authRoute       from './routes/auth';
 import kycRoute        from './routes/kyc';
@@ -23,7 +26,7 @@ import { issueToken }      from './middleware/auth';
 //  SEED DATA — Initial state for demo
 // ============================================================
 
-function seed(): void {
+async function seed(): Promise<void> {
   logger.banner('Seeding Initial System State');
 
   // Users
@@ -38,8 +41,8 @@ function seed(): void {
   // KYC — all seed users are pre-verified
   seedKyc(USERS);
 
-  // Ledger balances
-  seedBalances([
+  // Ledger balances (now async — writes to PostgreSQL)
+  await seedBalances([
     { userId: 'alice',   currency: 'USD', amount: 10_000 },
     { userId: 'alice',   currency: 'GBP', amount: 2_000  },
     { userId: 'bob',     currency: 'INR', amount: 500_000 },
@@ -52,8 +55,8 @@ function seed(): void {
     { userId: 'eve',     currency: 'JPY', amount: 1_000_000 },
   ]);
 
-  // Treasury reserves (system liquidity)
-  seedReserves({
+  // Treasury reserves (now async — writes to PostgreSQL)
+  await seedReserves({
     USD: 1_000_000,
     INR: 50_000_000,
     GBP: 500_000,
@@ -95,7 +98,7 @@ app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({
     status: 'ok',
     service: 'Global Payment System',
-    version: '1.0.0',
+    version: '1.1.0',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
   });
@@ -105,18 +108,18 @@ app.get('/health', (_req: Request, res: Response) => {
 app.get('/api', (_req: Request, res: Response) => {
   res.status(200).json({
     service: 'Real-Time Global Payment System with Blockchain Settlement',
-    version: '1.0.0',
+    version: '1.1.0',
     endpoints: {
       auth:        'POST /api/login',
       kyc:         'POST /api/kyc/submit | POST /api/kyc/address | POST /api/kyc/face | GET /api/kyc/status',
-      transfer:    'POST /api/transfer',
-      settlement:  'POST /api/settlement/run | GET /api/settlement/status | GET /api/settlement/history',
+      transfer:    'POST /api/transfer  (requires Idempotency-Key header)',
+      settlement:  'POST /api/settlement/run (requires Idempotency-Key header) | GET /api/settlement/status | GET /api/settlement/history',
       balance:     'GET /api/balance/:userId | GET /api/balance',
       transactions:'GET /api/transactions/:userId',
       health:      'GET /health',
     },
     seedUsers: ['alice', 'bob', 'charlie', 'diana', 'eve'],
-    note: 'All seed users are pre-authenticated. Use token-{userId} as Bearer token.',
+    note: 'All seed users are pre-authenticated. Use token-{userId} as Bearer token. Write endpoints require Idempotency-Key header.',
   });
 });
 
@@ -142,15 +145,43 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 // ============================================================
-//  START
+//  START — Initialize DB, run migrations, seed, then listen
 // ============================================================
 
-seed();
+async function start(): Promise<void> {
+  try {
+    // Initialize database connection + run migrations
+    await initDatabase();
 
-app.listen(PORT, () => {
-  logger.success(`Server running on http://localhost:${PORT}`);
-  logger.info(`API index: http://localhost:${PORT}/api`);
-  logger.info(`Health check: http://localhost:${PORT}/health`);
+    // Seed demo data (idempotent thanks to ON CONFLICT)
+    await seed();
+
+    app.listen(PORT, () => {
+      logger.success(`Server running on http://localhost:${PORT}`);
+      logger.info(`API index: http://localhost:${PORT}/api`);
+      logger.info(`Health check: http://localhost:${PORT}/health`);
+    });
+  } catch (err) {
+    logger.error('Failed to start server', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received. Closing database...');
+  await closeDatabase();
+  process.exit(0);
 });
+
+process.on('SIGINT', async () => {
+  logger.info('SIGINT received. Closing database...');
+  await closeDatabase();
+  process.exit(0);
+});
+
+start();
 
 export default app;

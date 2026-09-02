@@ -1,53 +1,107 @@
 // ============================================================
 //  TREASURY MODULE — System Liquidity Pool
 // ============================================================
+//
+//  CHANGE LOG (Phase 1 Hardening):
+//  ─────────────────────────────────
+//  - Replaced in-memory object with `treasury_reserves` PostgreSQL table.
+//  - All functions now async, accept optional Knex `trx` parameter.
+//  - Reserve reads use SELECT FOR UPDATE inside transactions.
+// ============================================================
 
+import { Knex } from 'knex';
 import { Currency, TreasuryReserves } from '../utils/types';
 import { logger } from '../utils/logger';
+import { getDb } from '../db/connection';
+import { InsufficientLiquidityError } from '../utils/errors';
 
 // ----------------------------
-//  System Reserve Store
+//  Helper
 // ----------------------------
-const reserves: TreasuryReserves = {};
+
+function reservesTable(trx?: Knex.Transaction) {
+  const db = trx ?? getDb();
+  return db('treasury_reserves');
+}
 
 // ----------------------------
 //  Reserve Management
 // ----------------------------
 
-export function getReserves(): TreasuryReserves {
-  return { ...reserves };
-}
-
-export function getReserve(currency: Currency): number {
-  return reserves[currency] ?? 0;
-}
-
-export function addReserve(currency: Currency, amount: number): void {
-  reserves[currency] = parseFloat(((reserves[currency] ?? 0) + amount).toFixed(4));
-  logger.debug(`Treasury reserve added`, { currency, amount, newTotal: reserves[currency] });
-}
-
-export function deductReserve(currency: Currency, amount: number): void {
-  const current = getReserve(currency);
-  if (current < amount) {
-    throw new Error(
-      `INSUFFICIENT_LIQUIDITY: Treasury has ${current} ${currency}, required ${amount}`
-    );
+export async function getReserves(): Promise<TreasuryReserves> {
+  const rows = await reservesTable().select('currency', 'amount');
+  const reserves: TreasuryReserves = {};
+  for (const row of rows) {
+    reserves[row.currency] = parseFloat(row.amount);
   }
-  reserves[currency] = parseFloat((current - amount).toFixed(4));
+  return reserves;
+}
+
+export async function getReserve(currency: Currency, trx?: Knex.Transaction): Promise<number> {
+  let query = reservesTable(trx)
+    .where({ currency })
+    .select('amount')
+    .first();
+
+  // Lock the row inside a transaction
+  if (trx) {
+    query = query.forUpdate();
+  }
+
+  const row = await query;
+  return row ? parseFloat(row.amount) : 0;
+}
+
+export async function addReserve(
+  currency: Currency,
+  amount: number,
+  trx?: Knex.Transaction
+): Promise<void> {
+  const current = await getReserve(currency, trx);
+  const newTotal = parseFloat((current + amount).toFixed(4));
+
+  const existing = await reservesTable(trx).where({ currency }).first();
+  if (existing) {
+    await reservesTable(trx)
+      .where({ currency })
+      .update({ amount: newTotal, updated_at: new Date() });
+  } else {
+    await reservesTable(trx).insert({ currency, amount: newTotal });
+  }
+
+  logger.debug(`Treasury reserve added`, { currency, amount, newTotal });
+}
+
+export async function deductReserve(
+  currency: Currency,
+  amount: number,
+  trx?: Knex.Transaction
+): Promise<void> {
+  const current = await getReserve(currency, trx);
+  if (current < amount) {
+    throw new InsufficientLiquidityError(current, amount, currency);
+  }
+  const newTotal = parseFloat((current - amount).toFixed(4));
+  await reservesTable(trx)
+    .where({ currency })
+    .update({ amount: newTotal, updated_at: new Date() });
 }
 
 // ----------------------------
 //  Validation
 // ----------------------------
 
-export function validateLiquidity(currency: Currency, amount: number): {
+export async function validateLiquidity(
+  currency: Currency,
+  amount: number,
+  trx?: Knex.Transaction
+): Promise<{
   valid: boolean;
   available: number;
   required: number;
   shortfall: number;
-} {
-  const available = getReserve(currency);
+}> {
+  const available = await getReserve(currency, trx);
   const valid = available >= amount;
   return {
     valid,
@@ -61,9 +115,16 @@ export function validateLiquidity(currency: Currency, amount: number): {
 //  Seed Initial Reserves
 // ----------------------------
 
-export function seedReserves(seeds: Partial<Record<Currency, number>>): void {
+export async function seedReserves(seeds: Partial<Record<Currency, number>>): Promise<void> {
+  const db = getDb();
   for (const [currency, amount] of Object.entries(seeds)) {
-    reserves[currency as Currency] = amount ?? 0;
+    await db.raw(
+      `INSERT INTO treasury_reserves (currency, amount)
+       VALUES (?, ?)
+       ON CONFLICT (currency) DO UPDATE
+       SET amount = EXCLUDED.amount, updated_at = NOW()`,
+      [currency, amount ?? 0]
+    );
     logger.info(`Treasury seeded: ${amount} ${currency}`);
   }
 }

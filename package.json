@@ -1,24 +1,39 @@
 {
   "name": "global-payment-system",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Production-grade real-time global payment system with blockchain-anchored settlement",
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "npm run test:flow",
-    "test:flow": "bash scripts/test_flow.sh"
+    "test": "jest --config jest.config.ts --runInBand",
+    "test:unit": "jest --config jest.config.ts tests/unit",
+    "test:integration": "jest --config jest.config.ts tests/integration",
+    "test:integration:chain": "jest --config jest.config.ts tests/integration/chain.test.ts",
+    "test:flow": "bash scripts/test_flow.sh",
+    "migrate": "knex --knexfile src/db/knexfile.ts migrate:latest",
+    "migrate:rollback": "knex --knexfile src/db/knexfile.ts migrate:rollback"
   },
   "dependencies": {
+    "@solana/spl-memo": "^0.2.5",
     "@solana/web3.js": "^1.98.4",
+    "bs58": "^6.0.0",
     "express": "^4.19.2",
+    "knex": "^3.3.0",
+    "pg": "^8.23.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.12.7",
+    "@types/pg": "^8.23.1",
+    "@types/supertest": "^7.2.1",
     "@types/uuid": "^9.0.8",
+    "jest": "^30.5.1",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.12",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.4.5"
   },

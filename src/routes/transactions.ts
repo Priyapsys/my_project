@@ -10,7 +10,7 @@ import { AuthenticatedRequest } from '../utils/types';
 const router = Router();
 
 // GET /api/transactions/:userId
-router.get('/:userId', authMiddleware, (req: AuthenticatedRequest, res: Response): void => {
+router.get('/:userId', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const { userId } = req.params;
   const { limit, status } = req.query;
 
@@ -24,7 +24,7 @@ router.get('/:userId', authMiddleware, (req: AuthenticatedRequest, res: Response
     return;
   }
 
-  let txs = getTransactions(userId);
+  let txs = await getTransactions(userId);
 
   // Optional filter by status
   if (status && typeof status === 'string') {
@@ -34,20 +34,15 @@ router.get('/:userId', authMiddleware, (req: AuthenticatedRequest, res: Response
   // Optional limit
   const limitNum = limit ? parseInt(limit as string, 10) : undefined;
   if (limitNum && !isNaN(limitNum)) {
-    txs = txs.slice(-limitNum); // most recent N
+    txs = txs.slice(0, limitNum); // already sorted newest-first from DB
   }
-
-  // Sort by newest first
-  const sorted = [...txs].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  );
 
   res.status(200).json({
     success: true,
     data: {
       userId,
-      count: sorted.length,
-      transactions: sorted.map((tx) => ({
+      count: txs.length,
+      transactions: txs.map((tx) => ({
         txId:             tx.txId,
         sender:           tx.sender,
         receiver:         tx.receiver,

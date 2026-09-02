@@ -62,6 +62,7 @@ pretty "$(curl -s $BASE/api/balance/bob \
 sep "7. Transfer: alice sends 500 USD → bob (INR)"
 pretty "$(curl -s -X POST $BASE/api/transfer \
   -H "Authorization: Bearer $ALICE_TOKEN" \
+  -H "Idempotency-Key: test-flow-transfer-1" \
   -H 'Content-Type: application/json' \
   -d '{
     "senderId": "alice",
@@ -75,6 +76,7 @@ pretty "$(curl -s -X POST $BASE/api/transfer \
 sep "8. Transfer: charlie sends 200 EUR → diana (AED)"
 pretty "$(curl -s -X POST $BASE/api/transfer \
   -H "Authorization: Bearer $CHARLIE_TOKEN" \
+  -H "Idempotency-Key: test-flow-transfer-2" \
   -H 'Content-Type: application/json' \
   -d '{
     "senderId": "charlie",
@@ -88,6 +90,7 @@ pretty "$(curl -s -X POST $BASE/api/transfer \
 sep "9. Transfer: alice sends 1000 USD → charlie (USD)"
 pretty "$(curl -s -X POST $BASE/api/transfer \
   -H "Authorization: Bearer $ALICE_TOKEN" \
+  -H "Idempotency-Key: test-flow-transfer-3" \
   -H 'Content-Type: application/json' \
   -d '{
     "senderId": "alice",
@@ -95,6 +98,20 @@ pretty "$(curl -s -X POST $BASE/api/transfer \
     "amount": 1000,
     "sourceCurrency": "USD",
     "destCurrency": "USD"
+  }')"
+
+# ── 9b. Failure Path: Insufficient Funds ─────────────────────
+sep "9b. Failure Path: Alice tries to send 50000 USD (Insufficient Funds)"
+pretty "$(curl -s -X POST $BASE/api/transfer \
+  -H "Authorization: Bearer $ALICE_TOKEN" \
+  -H "Idempotency-Key: test-flow-transfer-fail-1" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "senderId": "alice",
+    "receiverId": "bob",
+    "amount": 50000,
+    "sourceCurrency": "USD",
+    "destCurrency": "INR"
   }')"
 
 # ── 10. Balance After Transfers ──────────────────────────────
@@ -114,7 +131,8 @@ pretty "$(curl -s $BASE/api/settlement/status \
 # ── 12. Run Settlement ───────────────────────────────────────
 sep "12. Run Settlement (batch + blockchain anchor)"
 pretty "$(curl -s -X POST $BASE/api/settlement/run \
-  -H "Authorization: Bearer $ALICE_TOKEN")"
+  -H "Authorization: Bearer $ALICE_TOKEN" \
+  -H "Idempotency-Key: test-flow-settlement-1")"
 
 # ── 13. Settlement History ───────────────────────────────────
 sep "13. Blockchain Settlement History"
