@@ -20,7 +20,7 @@ function timeAgo(ts) {
 export default function TransactionList({ txs, compact, onViewAll, userId }) {
   if (!txs || txs.length === 0) {
     return (
-      <div className={styles.empty}>
+      <div className={styles.empty} data-testid="transaction-empty">
         <div className={styles.emptyIcon}>
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
             <path d="M9 12h6M9 16h6M9 8h6M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -33,12 +33,12 @@ export default function TransactionList({ txs, compact, onViewAll, userId }) {
   }
 
   return (
-    <div className={styles.wrapper}>
+    <div className={styles.wrapper} data-testid="transaction-list">
       {compact && (
         <div className={styles.header}>
           <h3>Recent Transactions</h3>
           {onViewAll && (
-            <button className={styles.viewAll} onClick={onViewAll}>
+            <button className={styles.viewAll} onClick={onViewAll} data-testid="transaction-view-all">
               View all →
             </button>
           )}
@@ -51,6 +51,7 @@ export default function TransactionList({ txs, compact, onViewAll, userId }) {
           return (
             <div
               key={tx.txId}
+              data-testid="transaction-item"
               className={styles.item + ' animate-slide-in'}
               style={{ animationDelay: `${i * 40}ms` }}
             >

@@ -81,6 +81,7 @@ export default function SendMoneyForm({ session, addToast, onSuccess }) {
             <label>Recipient User ID</label>
             <input
               type="text"
+              data-testid="transfer-receiver-input"
               placeholder="e.g. bob"
               value={form.receiverId}
               onChange={e => set('receiverId', e.target.value)}
@@ -95,6 +96,7 @@ export default function SendMoneyForm({ session, addToast, onSuccess }) {
               <div className={styles.inputWithSelect}>
                 <input
                   type="number"
+                  data-testid="transfer-amount-input"
                   min="0.01"
                   step="0.01"
                   placeholder="0.00"
@@ -103,6 +105,7 @@ export default function SendMoneyForm({ session, addToast, onSuccess }) {
                   className={styles.amountInput}
                 />
                 <select
+                  data-testid="transfer-source-currency-select"
                   value={form.sourceCurrency}
                   onChange={e => set('sourceCurrency', e.target.value)}
                   className={styles.currencySelect}
@@ -119,6 +122,7 @@ export default function SendMoneyForm({ session, addToast, onSuccess }) {
             <div className={styles.field + ' ' + styles.destField}>
               <label>Recipient Gets</label>
               <select
+                data-testid="transfer-dest-currency-select"
                 value={form.destCurrency}
                 onChange={e => set('destCurrency', e.target.value)}
                 className={styles.destSelect}
@@ -130,7 +134,7 @@ export default function SendMoneyForm({ session, addToast, onSuccess }) {
 
           {/* FX Preview */}
           {preview !== null && (
-            <div className={styles.fxPreview + ' animate-fade-in'}>
+            <div className={styles.fxPreview + ' animate-fade-in'} data-testid="transfer-fx-preview">
               <div className={styles.fxRow}>
                 <span className={styles.fxLabel}>Recipient gets</span>
                 <span className={styles.fxAmount}>{fmt(preview, form.destCurrency)}</span>
@@ -148,6 +152,7 @@ export default function SendMoneyForm({ session, addToast, onSuccess }) {
 
           <button
             type="submit"
+            data-testid="transfer-submit-button"
             className={'btn btn-primary btn-full btn-lg ' + styles.submitBtn}
             disabled={loading || !form.receiverId || !form.amount}
           >
@@ -162,7 +167,7 @@ export default function SendMoneyForm({ session, addToast, onSuccess }) {
 
         {/* Success result */}
         {result?.success && (
-          <div className={styles.successBox + ' animate-fade-in'}>
+          <div className={styles.successBox + ' animate-fade-in'} data-testid="transfer-success-box">
             <div className={styles.successHeader}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <circle cx="10" cy="10" r="10" fill="rgba(16,185,129,0.2)"/>
@@ -173,7 +178,7 @@ export default function SendMoneyForm({ session, addToast, onSuccess }) {
             <div className={styles.successGrid}>
               <div className={styles.successItem}>
                 <span>TX ID</span>
-                <span className="mono">{result.data.txId}</span>
+                <span className="mono" data-testid="transfer-tx-id">{result.data.txId}</span>
               </div>
               <div className={styles.successItem}>
                 <span>Sent</span>
@@ -195,7 +200,7 @@ export default function SendMoneyForm({ session, addToast, onSuccess }) {
 
         {/* Error */}
         {result?.success === false && (
-          <div className={styles.errorBox + ' animate-fade-in'}>
+          <div className={styles.errorBox + ' animate-fade-in'} data-testid="transfer-error-box">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
               <path d="M8 5v4M8 11v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>

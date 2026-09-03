@@ -240,16 +240,8 @@ export async function getAllSettlementBatches(): Promise<any[]> {
 export async function seedBalances(
   seeds: Array<{ userId: string; currency: Currency; amount: number }>
 ): Promise<void> {
-  const db = getDb();
   for (const { userId, currency, amount } of seeds) {
-    // Upsert via ON CONFLICT
-    await db.raw(
-      `INSERT INTO accounts (user_id, currency, balance, version)
-       VALUES (?, ?, ?, 1)
-       ON CONFLICT (user_id, currency) DO UPDATE
-       SET balance = EXCLUDED.balance, updated_at = NOW()`,
-      [userId, currency, parseFloat(amount.toFixed(4))]
-    );
+    await setBalance(userId, currency, amount);
     logger.info(`Seeded balance: ${userId} → ${amount} ${currency}`);
   }
 }

@@ -70,7 +70,10 @@ async function handleIdempotency(
   if (existing) {
     // Cache hit — return the original response
     logger.info(`Idempotency cache hit`, { key, endpoint });
-    res.status(existing.status_code).json(existing.response_body);
+    const body = typeof existing.response_body === 'string'
+      ? JSON.parse(existing.response_body)
+      : existing.response_body;
+    res.status(existing.status_code).json(body);
     return;
   }
 

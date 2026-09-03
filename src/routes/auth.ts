@@ -9,6 +9,9 @@ import { getKycRecord, setKycStatus } from '../middleware/kyc';
 
 const router = Router();
 
+// TODO: Implement refresh tokens — accept a refresh token and return a new
+//       access + refresh pair. See issueToken() in middleware/auth.ts.
+
 router.post('/', (req: Request, res: Response): void => {
   const { userId } = req.body;
 
@@ -30,7 +33,7 @@ router.post('/', (req: Request, res: Response): void => {
   
   const token = issueToken(cleanUserId);
 
-  logger.info(`Login: token issued`, { userId: cleanUserId });
+  logger.info(`Login: JWT issued`, { userId: cleanUserId });
 
   res.status(200).json({
     success: true,

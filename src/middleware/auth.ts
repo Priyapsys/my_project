@@ -1,24 +1,35 @@
 // ============================================================
-//  AUTH MIDDLEWARE — Bearer Token Validation
+//  AUTH MIDDLEWARE — JWT-Based Bearer Token Validation
 // ============================================================
 
+import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../utils/types';
 import { logger } from '../utils/logger';
 
-// In-memory token store: token → userId
-const tokenStore = new Map<string, string>();
+// ── JWT Configuration ───────────────────────────────────────
+const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-secret-do-not-use-in-production';
+const JWT_EXPIRES_IN_RAW = process.env.JWT_EXPIRES_IN ?? '1h';
+// Parse as seconds if purely numeric, otherwise keep as duration string
+const JWT_EXPIRES_IN: number | string =
+  /^\d+$/.test(JWT_EXPIRES_IN_RAW) ? parseInt(JWT_EXPIRES_IN_RAW, 10) : JWT_EXPIRES_IN_RAW;
 
+// ── Token payload shape ─────────────────────────────────────
+export interface JwtPayload {
+  userId: string;
+  iat: number;
+  exp: number;
+}
+
+// ── Issue a signed JWT ──────────────────────────────────────
+// TODO: Implement refresh tokens — issue a long-lived refresh token alongside
+//       the short-lived access token, store refresh tokens server-side (DB),
+//       and add a POST /api/auth/refresh endpoint to rotate them.
 export function issueToken(userId: string): string {
-  const token = `token-${userId}`;
-  tokenStore.set(token, userId);
-  return token;
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN as any });
 }
 
-export function revokeToken(token: string): void {
-  tokenStore.delete(token);
-}
-
+// ── Auth Middleware ──────────────────────────────────────────
 export function authMiddleware(
   req: AuthenticatedRequest,
   res: Response,
@@ -26,6 +37,7 @@ export function authMiddleware(
 ): void {
   const authHeader = req.headers.authorization;
 
+  // ── Missing header ────────────────────────────────────────
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     logger.warn(`Auth: Missing or malformed Authorization header`, {
       path: req.path,
@@ -34,27 +46,64 @@ export function authMiddleware(
     res.status(401).json({
       success: false,
       error: 'Authorization header required: Bearer <token>',
-      code: 'AUTH_REQUIRED',
+      code: 'AUTH_MISSING_TOKEN',
       timestamp: new Date().toISOString(),
     });
     return;
   }
 
   const token = authHeader.slice(7).trim();
-  const userId = tokenStore.get(token);
 
-  if (!userId) {
-    logger.warn(`Auth: Invalid token`, { token: token.slice(0, 12) + '...', path: req.path });
+  if (!token) {
     res.status(401).json({
       success: false,
-      error: 'Invalid or expired token',
-      code: 'AUTH_INVALID_TOKEN',
+      error: 'Token is empty',
+      code: 'AUTH_MISSING_TOKEN',
       timestamp: new Date().toISOString(),
     });
     return;
   }
 
-  req.userId = userId;
-  logger.debug(`Auth: Validated`, { userId, path: req.path });
-  next();
+  // ── Verify JWT ────────────────────────────────────────────
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    req.userId = decoded.userId;
+    logger.debug(`Auth: Validated`, { userId: decoded.userId, path: req.path });
+    next();
+  } catch (err) {
+    // Distinguish error types for clear client feedback
+    if (err instanceof TokenExpiredError) {
+      logger.warn(`Auth: Expired token`, { path: req.path, expiredAt: err.expiredAt });
+      res.status(401).json({
+        success: false,
+        error: 'Token has expired',
+        code: 'AUTH_TOKEN_EXPIRED',
+        timestamp: new Date().toISOString(),
+      });
+    } else if (err instanceof JsonWebTokenError) {
+      // Covers both malformed tokens and invalid signatures
+      const isMalformed = err.message === 'jwt malformed' || err.message.includes('Unexpected token');
+      logger.warn(`Auth: Invalid token`, { path: req.path, reason: err.message });
+      res.status(401).json({
+        success: false,
+        error: isMalformed ? 'Token is malformed' : 'Invalid token signature',
+        code: isMalformed ? 'AUTH_MALFORMED_TOKEN' : 'AUTH_INVALID_SIGNATURE',
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      logger.error(`Auth: Unexpected verification error`, {
+        path: req.path,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      res.status(401).json({
+        success: false,
+        error: 'Token verification failed',
+        code: 'AUTH_INVALID_TOKEN',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
 }
+
+// Re-export JWT_SECRET for test helpers only — not for production use
+export const _testSecret = JWT_SECRET;

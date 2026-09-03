@@ -2,9 +2,6 @@ import { useState, useEffect } from 'react'
 import { api } from '../api'
 import styles from './SettlementPanel.module.css'
 
-// ──────────────────────────────────────────────
-//  Settlement Status Card — reusable per batch
-// ──────────────────────────────────────────────
 function SettlementStatusCard({ batchId, status, explorerUrl, txHash, batchHash, transactionCount, totalVolume, timestamp, anchoredAt, isNew }) {
   const isVerified = status === 'VERIFIED'
   const displayTime = timestamp
@@ -14,11 +11,17 @@ function SettlementStatusCard({ batchId, status, explorerUrl, txHash, batchHash,
       : null
 
   return (
-    <div className={`${styles.statusCard} ${isNew ? styles.statusCardNew : ''}`}>
+    <div
+      data-testid="settlement-status-card"
+      className={`${styles.statusCard} ${isNew ? styles.statusCardNew : ''}`}
+    >
       {/* Top row: status badge + label */}
       <div className={styles.scHeader}>
         <div className={styles.scLeft}>
-          <div className={`${styles.verifiedBadge} ${isVerified ? styles.verifiedBadgeOn : styles.verifiedBadgeOff}`}>
+          <div
+            data-testid="settlement-status-badge"
+            className={`${styles.verifiedBadge} ${isVerified ? styles.verifiedBadgeOn : styles.verifiedBadgeOff}`}
+          >
             {isVerified ? (
               <>
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -46,6 +49,7 @@ function SettlementStatusCard({ batchId, status, explorerUrl, txHash, batchHash,
             href={explorerUrl}
             target="_blank"
             rel="noopener noreferrer"
+            data-testid="view-proof-button"
             className={styles.viewProofBtn}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -61,7 +65,7 @@ function SettlementStatusCard({ batchId, status, explorerUrl, txHash, batchHash,
       {/* Batch ID row */}
       <div className={styles.scBatchRow}>
         <span className={styles.scFieldLabel}>Batch ID</span>
-        <span className={`${styles.scBatchId} mono`} title={batchId}>
+        <span className={`${styles.scBatchId} mono`} data-testid="settlement-batch-id" title={batchId}>
           {batchId.length > 36 ? `${batchId.slice(0, 20)}…${batchId.slice(-12)}` : batchId}
         </span>
       </div>
@@ -71,7 +75,7 @@ function SettlementStatusCard({ batchId, status, explorerUrl, txHash, batchHash,
         {transactionCount !== undefined && (
           <div className={styles.scCell}>
             <span className={styles.scCellLabel}>Transactions</span>
-            <span className={styles.scCellValue}>{transactionCount}</span>
+            <span className={styles.scCellValue} data-testid="settlement-tx-count">{transactionCount}</span>
           </div>
         )}
         {totalVolume && (
@@ -90,7 +94,7 @@ function SettlementStatusCard({ batchId, status, explorerUrl, txHash, batchHash,
         )}
       </div>
 
-      {/* Proof anchor note — no raw hash shown */}
+      {/* Proof anchor note */}
       {isVerified && (
         <div className={styles.scProofNote}>
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
@@ -105,9 +109,6 @@ function SettlementStatusCard({ batchId, status, explorerUrl, txHash, batchHash,
   )
 }
 
-// ──────────────────────────────────────────────
-//  Main Settlement Panel
-// ──────────────────────────────────────────────
 export default function SettlementPanel({ session, addToast, queueSize, onSettled }) {
   const [loading, setLoading]     = useState(false)
   const [result, setResult]       = useState(null)
@@ -149,7 +150,7 @@ export default function SettlementPanel({ session, addToast, queueSize, onSettle
     <div className={styles.wrapper}>
 
       {/* ── Header ── */}
-      <div className={styles.heroCard}>
+      <div className={styles.heroCard} data-testid="settlement-hero">
         <div className={styles.heroLeft}>
           <div className={styles.heroIcon}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
@@ -173,7 +174,7 @@ export default function SettlementPanel({ session, addToast, queueSize, onSettle
         </div>
 
         <div className={styles.queueStat}>
-          <div className={styles.queueNum}>{queueSize}</div>
+          <div className={styles.queueNum} data-testid="settlement-queue-size">{queueSize}</div>
           <div className={styles.queueLabel}>Pending</div>
         </div>
       </div>
@@ -198,6 +199,7 @@ export default function SettlementPanel({ session, addToast, queueSize, onSettle
       {/* ── Run Button ── */}
       <div className={styles.runSection}>
         <button
+          data-testid="run-settlement-button"
           className={'btn btn-primary btn-lg ' + styles.runBtn}
           onClick={handleSettle}
           disabled={loading || queueSize === 0}
@@ -221,7 +223,7 @@ export default function SettlementPanel({ session, addToast, queueSize, onSettle
 
       {/* ── Result: Settlement Status Card ── */}
       {result && (
-        <div className="animate-fade-in">
+        <div className="animate-fade-in" data-testid="latest-settlement-section">
           <div className={styles.resultHeading}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <circle cx="8" cy="8" r="8" fill="rgba(0,212,170,0.15)"/>
@@ -244,7 +246,7 @@ export default function SettlementPanel({ session, addToast, queueSize, onSettle
       )}
 
       {/* ── Settlement History ── */}
-      <div className={styles.historySection}>
+      <div className={styles.historySection} data-testid="settlement-history-section">
         <h3 className={styles.histTitle}>Settlement History</h3>
         {loadingHist ? (
           <div className={styles.histLoading}>Loading history…</div>

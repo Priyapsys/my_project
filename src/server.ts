@@ -15,12 +15,12 @@ import transferRoute   from './routes/transfer';
 import settlementRoute from './routes/settlement';
 import balanceRoute    from './routes/balance';
 import txRoute         from './routes/transactions';
+import testRoute       from './routes/test';
 
 // ── Modules ─────────────────────────────────────────────────
 import { seedBalances }    from './modules/ledger';
 import { seedReserves }    from './modules/treasury';
 import { seedKyc }         from './middleware/kyc';
-import { issueToken }      from './middleware/auth';
 
 // ============================================================
 //  SEED DATA — Initial state for demo
@@ -32,11 +32,9 @@ async function seed(): Promise<void> {
   // Users
   const USERS = ['alice', 'bob', 'charlie', 'diana', 'eve'];
 
-  // Pre-issue tokens (so demo scripts don't need to log in)
-  USERS.forEach((u) => {
-    issueToken(u);
-    logger.info(`Token pre-issued for: ${u} → token-${u}`);
-  });
+  // JWT auth is stateless — no pre-issued tokens needed.
+  // Seed users must POST /api/login { "userId": "alice" } to get a JWT.
+  logger.info(`Seed users: ${USERS.join(', ')} — login via POST /api/login`);
 
   // KYC — all seed users are pre-verified
   seedKyc(USERS);
@@ -92,6 +90,7 @@ app.use('/api/transfer',    transferRoute);
 app.use('/api/settlement',  settlementRoute);
 app.use('/api/balance',     balanceRoute);
 app.use('/api/transactions', txRoute);
+app.use('/api/test',         testRoute);
 
 // ── Health Check ─────────────────────────────────────────────
 app.get('/health', (_req: Request, res: Response) => {
@@ -119,7 +118,7 @@ app.get('/api', (_req: Request, res: Response) => {
       health:      'GET /health',
     },
     seedUsers: ['alice', 'bob', 'charlie', 'diana', 'eve'],
-    note: 'All seed users are pre-authenticated. Use token-{userId} as Bearer token. Write endpoints require Idempotency-Key header.',
+    note: 'POST /api/login with { "userId": "<name>" } to get a JWT. Use it as: Authorization: Bearer <jwt>. Write endpoints require Idempotency-Key header.',
   });
 });
 

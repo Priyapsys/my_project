@@ -50,9 +50,9 @@ router.post('/run', authMiddleware, idempotencyMiddleware, async (req: Authentic
 });
 
 // GET /api/settlement/status — queue + chain stats
-router.get('/status', authMiddleware, (req: AuthenticatedRequest, res: Response): void => {
+router.get('/status', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const settlementStats = getSettlementStats();
-  const chainStats = getChainStats();
+  const chainStats = await getChainStats();
 
   res.status(200).json({
     success: true,
@@ -65,14 +65,14 @@ router.get('/status', authMiddleware, (req: AuthenticatedRequest, res: Response)
 });
 
 // GET /api/settlement/history — all blockchain records
-router.get('/history', authMiddleware, (req: AuthenticatedRequest, res: Response): void => {
-  const records = getAllRecords();
+router.get('/history', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const records = await getAllRecords();
 
   res.status(200).json({
     success: true,
     data: {
       count: records.length,
-      batches: records.map((r) => ({
+      batches: records.map((r: any) => ({
         batchId:          r.batchId,
         txHash:           r.txHash,
         batchHash:        r.batchHash,

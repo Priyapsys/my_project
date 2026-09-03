@@ -70,6 +70,13 @@ export async function sendBatchToBlockchain(
 ): Promise<{ txHash: string; explorerUrl: string }> {
   logger.chain(`Preparing to anchor batch on Solana Devnet...`);
 
+  if (process.env.NODE_ENV === 'test') {
+    const mockSig = `5K1s${batchId.replace(/-/g, '').slice(0, 16)}devnet${Date.now().toString(36)}`;
+    const explorerUrl = `${EXPLORER_BASE}/${mockSig}?cluster=devnet`;
+    logger.chain(`[TEST MODE] Batch anchored on-chain`, { batchId, txHash: mockSig, explorerUrl });
+    return { txHash: mockSig, explorerUrl };
+  }
+
   const keypair = persistentWallet;
   logger.chain(`Using wallet: ${keypair.publicKey.toBase58()}`);
 

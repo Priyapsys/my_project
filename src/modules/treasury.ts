@@ -118,13 +118,13 @@ export async function validateLiquidity(
 export async function seedReserves(seeds: Partial<Record<Currency, number>>): Promise<void> {
   const db = getDb();
   for (const [currency, amount] of Object.entries(seeds)) {
-    await db.raw(
-      `INSERT INTO treasury_reserves (currency, amount)
-       VALUES (?, ?)
-       ON CONFLICT (currency) DO UPDATE
-       SET amount = EXCLUDED.amount, updated_at = NOW()`,
-      [currency, amount ?? 0]
-    );
-    logger.info(`Treasury seeded: ${amount} ${currency}`);
+    const amt = amount ?? 0;
+    const existing = await db('treasury_reserves').where({ currency }).first();
+    if (existing) {
+      await db('treasury_reserves').where({ currency }).update({ amount: amt, updated_at: new Date() });
+    } else {
+      await db('treasury_reserves').insert({ currency, amount: amt, updated_at: new Date() });
+    }
+    logger.info(`Treasury seeded: ${amt} ${currency}`);
   }
 }

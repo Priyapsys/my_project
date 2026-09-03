@@ -55,6 +55,7 @@ export default function LoginView({ onLogin, addToast }) {
             <label>User ID</label>
             <input
               type="text"
+              data-testid="login-user-id-input"
               value={userId}
               onChange={e => setUserId(e.target.value)}
               placeholder="e.g. alice"
@@ -66,6 +67,7 @@ export default function LoginView({ onLogin, addToast }) {
 
           <button
             type="submit"
+            data-testid="login-submit-button"
             className={'btn btn-primary btn-full btn-lg ' + styles.submitBtn}
             disabled={loading || !userId.trim()}
           >
@@ -78,7 +80,12 @@ export default function LoginView({ onLogin, addToast }) {
           <p>Demo accounts</p>
           <div className={styles.chips}>
             {['alice','bob','charlie','diana','eve'].map(u => (
-              <button key={u} className={styles.chip} onClick={() => fillDemo(u)}>
+              <button
+                key={u}
+                data-testid={`demo-user-${u}`}
+                className={styles.chip}
+                onClick={() => fillDemo(u)}
+              >
                 {u}
               </button>
             ))}

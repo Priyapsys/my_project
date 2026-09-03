@@ -8,29 +8,18 @@ const ID_TYPES = [
   { value: 'driver_license', label: '🚗  Driver\'s License' },
 ]
 
-// ── Step indicator labels
 const STEPS = ['ID Document', 'Address Proof', 'Face Check']
 
 export default function KycView({ session, onDone, addToast }) {
-  // currentStep: 1 | 2 | 3   — which form we're showing
-  // phase:  'form' | 'loading' | 'done'
   const [currentStep, setCurrentStep] = useState(1)
   const [phase, setPhase] = useState('form')
 
-  // Step 1 fields
   const [idType, setIdType]     = useState('passport')
   const [idNumber, setIdNumber] = useState('')
-
-  // Step 2 field
   const [addressProof, setAddressProof] = useState('')
-
-  // Step 3 field
   const [selfieDone, setSelfieDone] = useState(false)
-
-  // ── Completed steps tracker
   const [completedSteps, setCompletedSteps] = useState([])
 
-  // ── Generic loading wrapper
   const withLoading = async (fn) => {
     setPhase('loading')
     try {
@@ -41,9 +30,6 @@ export default function KycView({ session, onDone, addToast }) {
     }
   }
 
-  // ──────────────────────────────────────────
-  //  STEP 1: Submit ID
-  // ──────────────────────────────────────────
   const handleSubmitId = async (e) => {
     e.preventDefault()
     if (!idNumber.trim()) { addToast('ID number is required', 'error'); return }
@@ -57,9 +43,6 @@ export default function KycView({ session, onDone, addToast }) {
     })
   }
 
-  // ──────────────────────────────────────────
-  //  STEP 2: Submit address proof
-  // ──────────────────────────────────────────
   const handleSubmitAddress = async (e) => {
     e.preventDefault()
     if (!addressProof.trim()) { addToast('Address proof is required', 'error'); return }
@@ -73,9 +56,6 @@ export default function KycView({ session, onDone, addToast }) {
     })
   }
 
-  // ──────────────────────────────────────────
-  //  STEP 3: Face / liveness
-  // ──────────────────────────────────────────
   const handleSubmitFace = async (e) => {
     e.preventDefault()
     if (!selfieDone) { addToast('Please complete the liveness check first', 'error'); return }
@@ -88,9 +68,6 @@ export default function KycView({ session, onDone, addToast }) {
     })
   }
 
-  // ──────────────────────────────────────────
-  //  Render
-  // ──────────────────────────────────────────
   return (
     <div className={styles.container}>
       <div className={styles.card + ' animate-fade-in-scale'}>
@@ -113,7 +90,7 @@ export default function KycView({ session, onDone, addToast }) {
           </div>
         </div>
 
-        {/* Step Progress Bar (only show during form phase) */}
+        {/* Step Progress Bar */}
         {phase !== 'done' && (
           <div className={styles.progressWrapper}>
             {STEPS.map((label, i) => {
@@ -163,7 +140,7 @@ export default function KycView({ session, onDone, addToast }) {
 
         {/* ── DONE STATE */}
         {phase === 'done' && (
-          <div className={styles.stepContainer + ' animate-fade-in-scale'}>
+          <div data-testid="kyc-done-banner" className={styles.stepContainer + ' animate-fade-in-scale'}>
             <div className={styles.iconWrapDone}>
               <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
                 <circle cx="20" cy="20" r="20" fill="rgba(16,185,129,0.15)"/>
@@ -188,6 +165,7 @@ export default function KycView({ session, onDone, addToast }) {
               <div className={styles.formGroup}>
                 <label>ID Type</label>
                 <select
+                  data-testid="kyc-id-type-select"
                   value={idType}
                   onChange={e => setIdType(e.target.value)}
                   className={styles.input}
@@ -202,6 +180,7 @@ export default function KycView({ session, onDone, addToast }) {
                 <label>Document Number</label>
                 <input
                   type="text"
+                  data-testid="kyc-id-number-input"
                   placeholder="e.g. AB1234567"
                   value={idNumber}
                   onChange={e => setIdNumber(e.target.value)}
@@ -213,7 +192,11 @@ export default function KycView({ session, onDone, addToast }) {
                 <label>Upload ID (Front &amp; Back)</label>
                 <input type="file" accept="image/*,application/pdf" className={styles.fileInput} />
               </div>
-              <button type="submit" className={'btn btn-primary btn-full btn-lg ' + styles.verifyBtn}>
+              <button
+                type="submit"
+                data-testid="kyc-step1-submit-button"
+                className={'btn btn-primary btn-full btn-lg ' + styles.verifyBtn}
+              >
                 Continue →
               </button>
             </form>
@@ -232,6 +215,7 @@ export default function KycView({ session, onDone, addToast }) {
                 <label>Full Residential Address</label>
                 <input
                   type="text"
+                  data-testid="kyc-address-input"
                   placeholder="e.g. 123 Main St, Mumbai, India 400001"
                   value={addressProof}
                   onChange={e => setAddressProof(e.target.value)}
@@ -244,7 +228,11 @@ export default function KycView({ session, onDone, addToast }) {
                 <div className={styles.fileHint}>Utility bill, bank statement, or rental agreement (last 3 months)</div>
                 <input type="file" accept="image/*,application/pdf" className={styles.fileInput} />
               </div>
-              <button type="submit" className={'btn btn-primary btn-full btn-lg ' + styles.verifyBtn}>
+              <button
+                type="submit"
+                data-testid="kyc-step2-submit-button"
+                className={'btn btn-primary btn-full btn-lg ' + styles.verifyBtn}
+              >
                 Continue →
               </button>
             </form>
@@ -262,6 +250,7 @@ export default function KycView({ session, onDone, addToast }) {
               <div className={styles.formGroup}>
                 <button
                   type="button"
+                  data-testid="kyc-liveness-button"
                   className={`${styles.livenessBtn} ${selfieDone ? styles.livenessBtnDone : ''}`}
                   onClick={() => setSelfieDone(true)}
                 >
@@ -286,6 +275,7 @@ export default function KycView({ session, onDone, addToast }) {
               </div>
               <button
                 type="submit"
+                data-testid="kyc-step3-submit-button"
                 disabled={!selfieDone}
                 className={'btn btn-primary btn-full btn-lg ' + styles.verifyBtn + (!selfieDone ? ' ' + styles.btnDisabled : '')}
               >

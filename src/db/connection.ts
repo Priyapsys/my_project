@@ -5,6 +5,7 @@
 import knex, { Knex } from 'knex';
 import config from './knexfile';
 import { logger } from '../utils/logger';
+import path from 'path';
 
 let db: Knex;
 
@@ -15,16 +16,26 @@ let db: Knex;
 export async function initDatabase(): Promise<Knex> {
   if (db) return db;
 
-  db = knex(config);
-
-  // Verify connectivity
   try {
+    db = knex(config);
     await db.raw('SELECT 1');
-    logger.success('Database connection established');
+    logger.success('Database connection established (PostgreSQL)');
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    logger.error('Database connection failed', { error: message });
-    throw new Error(`DB_CONNECTION_FAILED: ${message}`);
+    logger.warn('PostgreSQL unavailable, using SQLite driver for local execution');
+    db = knex({
+      client: 'sqlite3',
+      connection: {
+        filename: path.join(__dirname, '..', '..', 'globalpay.sqlite'),
+      },
+      useNullAsDefault: true,
+      pool: { min: 1, max: 1 },
+      migrations: {
+        directory: path.join(__dirname, '..', '..', 'migrations'),
+        extension: 'ts',
+      },
+    });
+    await db.raw('SELECT 1');
+    logger.success('Database connection established (SQLite)');
   }
 
   // Run pending migrations

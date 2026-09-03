@@ -51,7 +51,7 @@ export default function Dashboard({ session, onLogout, addToast }) {
   useEffect(() => { refreshAll() }, [refreshAll])
 
   return (
-    <div className={styles.layout}>
+    <div className={styles.layout} data-testid="dashboard-layout">
       {/* Sidebar */}
       <aside className={styles.sidebar}>
         <div className={styles.sideTop}>
@@ -74,6 +74,7 @@ export default function Dashboard({ session, onLogout, addToast }) {
             {TABS.map(t => (
               <button
                 key={t.id}
+                data-testid={`nav-tab-${t.id}`}
                 className={styles.navBtn + (tab === t.id ? ' ' + styles.navActive : '')}
                 onClick={() => setTab(t.id)}
               >
@@ -91,13 +92,17 @@ export default function Dashboard({ session, onLogout, addToast }) {
           <div className={styles.userRow}>
             <div className={styles.avatar}>{session.userId[0].toUpperCase()}</div>
             <div>
-              <div className={styles.userName}>{session.userId}</div>
+              <div className={styles.userName} data-testid="user-name">{session.userId}</div>
               <div className={styles.userStatus}>
                 <span className={styles.dot} /> Verified
               </div>
             </div>
           </div>
-          <button className={'btn btn-secondary btn-sm ' + styles.logoutBtn} onClick={onLogout}>
+          <button
+            data-testid="logout-button"
+            className={'btn btn-secondary btn-sm ' + styles.logoutBtn}
+            onClick={onLogout}
+          >
             Sign out
           </button>
         </div>
@@ -107,7 +112,7 @@ export default function Dashboard({ session, onLogout, addToast }) {
       <main className={styles.main}>
         <div className={styles.topBar}>
           <div>
-            <h1 className={styles.pageTitle}>
+            <h1 className={styles.pageTitle} data-testid="page-title">
               {tab === 'overview'     && 'Dashboard'}
               {tab === 'send'         && 'Send Money'}
               {tab === 'transactions' && 'Transaction History'}
@@ -117,7 +122,11 @@ export default function Dashboard({ session, onLogout, addToast }) {
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
           </div>
-          <button className={'btn btn-secondary btn-sm'} onClick={refreshAll}>
+          <button
+            data-testid="refresh-button"
+            className={'btn btn-secondary btn-sm'}
+            onClick={refreshAll}
+          >
             ↻ Refresh
           </button>
         </div>
@@ -132,6 +141,7 @@ export default function Dashboard({ session, onLogout, addToast }) {
               />
               <div className={styles.quickActions}>
                 <button
+                  data-testid="quick-action-send"
                   className={'btn btn-primary ' + styles.qaBtn}
                   onClick={() => setTab('send')}
                 >
@@ -141,6 +151,7 @@ export default function Dashboard({ session, onLogout, addToast }) {
                   Send Money
                 </button>
                 <button
+                  data-testid="quick-action-history"
                   className={'btn btn-secondary ' + styles.qaBtn}
                   onClick={() => setTab('transactions')}
                 >
@@ -150,6 +161,7 @@ export default function Dashboard({ session, onLogout, addToast }) {
                   View History
                 </button>
                 <button
+                  data-testid="quick-action-settlement"
                   className={'btn btn-ghost ' + styles.qaBtn}
                   onClick={() => setTab('settlement')}
                 >

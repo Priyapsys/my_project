@@ -26,21 +26,21 @@ export default function BalanceCard({ balances, loading, userId }) {
 
   if (loading) {
     return (
-      <div className={styles.card}>
+      <div className={styles.card} data-testid="balance-card-loading">
         <div className={styles.shimmer} />
       </div>
     )
   }
 
   return (
-    <div className={styles.card}>
+    <div className={styles.card} data-testid="balance-card">
       {/* Top accent line */}
       <div className={styles.accentLine} />
 
       <div className={styles.header}>
         <div>
           <div className={styles.label}>Total Portfolio Value</div>
-          <div className={styles.total}>
+          <div className={styles.total} data-testid="balance-total-usd">
             {fmt(totalUSD, 'USD')}
             <span className={styles.approx}>≈ USD</span>
           </div>
@@ -55,10 +55,10 @@ export default function BalanceCard({ balances, loading, userId }) {
 
       <div className={styles.currencies}>
         {Object.entries(balances).length === 0 ? (
-          <div className={styles.empty}>No balances yet</div>
+          <div className={styles.empty} data-testid="balance-empty">No balances yet</div>
         ) : (
           Object.entries(balances).map(([currency, amount]) => (
-            <div key={currency} className={styles.currencyRow}>
+            <div key={currency} className={styles.currencyRow} data-testid={`balance-row-${currency}`}>
               <div className={styles.currencyLeft}>
                 <span className={styles.flag}>{CURRENCY_FLAGS[currency] ?? '💱'}</span>
                 <div>
@@ -67,7 +67,7 @@ export default function BalanceCard({ balances, loading, userId }) {
                 </div>
               </div>
               <div className={styles.currencyRight}>
-                <div className={styles.amount}>{fmt(amount, currency)}</div>
+                <div className={styles.amount} data-testid={`balance-amount-${currency}`}>{fmt(amount, currency)}</div>
                 <div className={styles.usdVal}>≈ {fmt(amount * (USD_RATES[currency] ?? 0), 'USD')}</div>
               </div>
             </div>

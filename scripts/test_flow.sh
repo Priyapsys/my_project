@@ -5,9 +5,6 @@
 set -e
 
 BASE="http://localhost:3000"
-ALICE_TOKEN="token-alice"
-BOB_TOKEN="token-bob"
-CHARLIE_TOKEN="token-charlie"
 
 echo ""
 echo "══════════════════════════════════════════════════"
@@ -25,6 +22,16 @@ sep() {
   echo "── $1 ──────────────────────────────────"
 }
 
+# Extract a JWT token from login response JSON
+login() {
+  local user=$1
+  local response
+  response=$(curl -s -X POST "$BASE/api/login" \
+    -H 'Content-Type: application/json' \
+    -d "{\"userId\": \"$user\"}")
+  echo "$response" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['token'])" 2>/dev/null
+}
+
 # ── 1. Health Check ─────────────────────────────────────────
 sep "1. Health Check"
 pretty "$(curl -s $BASE/health)"
@@ -33,11 +40,14 @@ pretty "$(curl -s $BASE/health)"
 sep "2. API Index"
 pretty "$(curl -s $BASE/api)"
 
-# ── 3. Login ─────────────────────────────────────────────────
-sep "3. Login (generate token for 'alice')"
-pretty "$(curl -s -X POST $BASE/api/login \
-  -H 'Content-Type: application/json' \
-  -d '{"userId": "alice"}')"
+# ── 3. Login — obtain JWTs for test users ────────────────────
+sep "3. Login — obtaining JWTs"
+ALICE_TOKEN=$(login alice)
+BOB_TOKEN=$(login bob)
+CHARLIE_TOKEN=$(login charlie)
+echo "  ✓ alice   token: ${ALICE_TOKEN:0:20}..."
+echo "  ✓ bob     token: ${BOB_TOKEN:0:20}..."
+echo "  ✓ charlie token: ${CHARLIE_TOKEN:0:20}..."
 
 # ── 4. KYC Verify ────────────────────────────────────────────
 sep "4. KYC Verify (alice)"
