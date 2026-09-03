@@ -30,7 +30,7 @@ export interface SettlementRunResult {
 // ----------------------------
 
 export async function runSettlement(): Promise<SettlementRunResult> {
-  const queueSize = getQueueSize();
+  const queueSize = await getQueueSize();
 
   logger.separator();
   logger.settle(`Settlement run triggered`, { queueSize });
@@ -40,7 +40,7 @@ export async function runSettlement(): Promise<SettlementRunResult> {
   }
 
   // ── Step 1: Drain queue ────────────────────────────────────
-  const transactions = flushQueue();
+  const transactions = await flushQueue();
   logger.settle(`Drained ${transactions.length} transactions from queue`);
 
   // ── Step 2: Create batch ───────────────────────────────────

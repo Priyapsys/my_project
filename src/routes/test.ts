@@ -31,6 +31,8 @@ router.post('/reset', async (_req: Request, res: Response) => {
     await db('transactions').del();
     await db('treasury_reserves').del();
     await db('settlement_batches').del();
+    await db('settlement_queue').del();
+    await db('kyc_records').del();
 
     await seedReserves({
       USD: 1_000_000,
@@ -60,7 +62,7 @@ router.post('/seed-user', async (req: Request, res: Response) => {
     }
 
     if (kycVerified) {
-      seedKycVerified([userId]);
+      await seedKycVerified([userId]);
     }
 
     if (balances && typeof balances === 'object') {

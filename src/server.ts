@@ -37,7 +37,7 @@ async function seed(): Promise<void> {
   logger.info(`Seed users: ${USERS.join(', ')} — login via POST /api/login`);
 
   // KYC — all seed users are pre-verified
-  seedKyc(USERS);
+  await seedKyc(USERS);
 
   // Ledger balances (now async — writes to PostgreSQL)
   await seedBalances([
@@ -181,6 +181,8 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-start();
+if (process.env.NODE_ENV !== 'test') {
+  start();
+}
 
 export default app;

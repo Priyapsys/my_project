@@ -8,7 +8,10 @@ import { AuthenticatedRequest } from '../utils/types';
 import { logger } from '../utils/logger';
 
 // ── JWT Configuration ───────────────────────────────────────
-const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-secret-do-not-use-in-production';
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim() === '') {
+  throw new Error('FATAL: JWT_SECRET environment variable is required but not set.');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN_RAW = process.env.JWT_EXPIRES_IN ?? '1h';
 // Parse as seconds if purely numeric, otherwise keep as duration string
 const JWT_EXPIRES_IN: number | string =

@@ -7,6 +7,8 @@ import * as web3 from '@solana/web3.js';
 import * as ledger from '../../src/modules/ledger';
 import { v4 as uuidv4 } from 'uuid';
 
+import { initDatabase, closeDatabase } from '../../src/db/connection';
+
 jest.mock('../../src/modules/ledger', () => ({
   __esModule: true,
   ...jest.requireActual('../../src/modules/ledger'),
@@ -16,6 +18,14 @@ jest.mock('../../src/modules/ledger', () => ({
 }));
 
 describe('Blockchain Integration Tests', () => {
+  beforeAll(async () => {
+    try { await initDatabase(); } catch(e) {}
+  });
+
+  afterAll(async () => {
+    try { await closeDatabase(); } catch(e) {}
+  });
+
   describe('Devnet Anchor (Live)', () => {
     // This test actually hits the devnet!
     it('should successfully anchor a batch hash to devnet and verify it', async () => {
@@ -57,7 +67,7 @@ describe('Blockchain Integration Tests', () => {
       };
       
       const settlementQueue = require('../../src/modules/settlement');
-      settlementQueue.enqueue(tx as any);
+      await settlementQueue.enqueue(tx as any);
       
       await expect(runSettlement()).rejects.toThrow(SettlementAnchorFailedError);
       

@@ -5,6 +5,7 @@
 import { Router, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { idempotencyMiddleware } from '../middleware/idempotency';
+import { transferRateLimiter } from '../middleware/rateLimit';
 import { runSettlement } from '../services/settlementService';
 import { getSettlementStats } from '../modules/settlement';
 import { getChainStats, getAllRecords, verifyBatchOnChain, hashBatchData } from '../services/blockchainService';
@@ -15,7 +16,7 @@ import { logger } from '../utils/logger';
 const router = Router();
 
 // POST /api/settlement/run — trigger batch settlement
-router.post('/run', authMiddleware, idempotencyMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.post('/run', authMiddleware, transferRateLimiter, idempotencyMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const result = await runSettlement();
 
@@ -51,7 +52,7 @@ router.post('/run', authMiddleware, idempotencyMiddleware, async (req: Authentic
 
 // GET /api/settlement/status — queue + chain stats
 router.get('/status', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const settlementStats = getSettlementStats();
+  const settlementStats = await getSettlementStats();
   const chainStats = await getChainStats();
 
   res.status(200).json({

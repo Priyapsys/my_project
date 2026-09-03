@@ -17,31 +17,31 @@ import {
 //  Re-exports (used by routes/auth.ts and server.ts)
 // ----------------------------
 
-export function getKycRecord(userId: string): KycRecord | undefined {
-  return _getKycRecord(userId);
+export async function getKycRecord(userId: string): Promise<KycRecord | undefined> {
+  return await _getKycRecord(userId);
 }
 
 /** Called on login: create a PENDING record if none exists */
-export function setKycStatus(userId: string, status: KycStatus): void {
+export async function setKycStatus(userId: string, status: KycStatus): Promise<void> {
   if (status === 'PENDING') {
-    _initKycRecord(userId);
+    await _initKycRecord(userId);
   }
 }
 
 /** Seed multiple users as fully VERIFIED (demo users) */
-export function seedKyc(userIds: string[]): void {
-  _seedKycVerified(userIds);
+export async function seedKyc(userIds: string[]): Promise<void> {
+  await _seedKycVerified(userIds);
 }
 
 // ----------------------------
 //  Middleware
 // ----------------------------
 
-export function kycMiddleware(
+export async function kycMiddleware(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   const userId = req.userId;
 
   if (!userId) {
@@ -54,8 +54,9 @@ export function kycMiddleware(
     return;
   }
 
-  if (!_isVerified(userId)) {
-    const record = _getKycRecord(userId);
+  const verified = await _isVerified(userId);
+  if (!verified) {
+    const record = await _getKycRecord(userId);
     logger.warn(`KYC: User not verified`, { userId, status: record?.status ?? 'NOT_FOUND' });
     res.status(403).json({
       success: false,

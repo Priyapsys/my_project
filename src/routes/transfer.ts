@@ -6,6 +6,7 @@ import { Router, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { kycMiddleware } from '../middleware/kyc';
 import { idempotencyMiddleware } from '../middleware/idempotency';
+import { transferRateLimiter } from '../middleware/rateLimit';
 import { executeTransfer } from '../services/transactionService';
 import { AuthenticatedRequest, TransferRequestBody } from '../utils/types';
 import { DomainError } from '../utils/errors';
@@ -16,6 +17,7 @@ const router = Router();
 router.post(
   '/',
   authMiddleware,
+  transferRateLimiter,
   kycMiddleware,
   idempotencyMiddleware,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {

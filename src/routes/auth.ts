@@ -9,10 +9,7 @@ import { getKycRecord, setKycStatus } from '../middleware/kyc';
 
 const router = Router();
 
-// TODO: Implement refresh tokens — accept a refresh token and return a new
-//       access + refresh pair. See issueToken() in middleware/auth.ts.
-
-router.post('/', (req: Request, res: Response): void => {
+router.post('/', async (req: Request, res: Response): Promise<void> => {
   const { userId } = req.body;
 
   if (!userId || typeof userId !== 'string' || userId.trim() === '') {
@@ -27,8 +24,9 @@ router.post('/', (req: Request, res: Response): void => {
 
   const cleanUserId = userId.trim().toLowerCase();
   
-  if (!getKycRecord(cleanUserId)) {
-    setKycStatus(cleanUserId, 'PENDING');
+  const existingKyc = await getKycRecord(cleanUserId);
+  if (!existingKyc) {
+    await setKycStatus(cleanUserId, 'PENDING');
   }
   
   const token = issueToken(cleanUserId);

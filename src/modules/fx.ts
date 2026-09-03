@@ -1,17 +1,13 @@
 // ============================================================
-//  FX ENGINE — Currency Conversion with Static Rates
+//  FX ENGINE — Currency Conversion with Live Rates & Caching
 // ============================================================
 
 import { Currency, FxResult } from '../utils/types';
 import { logger } from '../utils/logger';
 
-// ----------------------------
-//  Static FX Rate Table (base: USD)
-//  Rates represent: 1 {from} = X {to}
-// ----------------------------
 type RateTable = Record<string, Record<string, number>>;
 
-const FX_RATES: RateTable = {
+const STATIC_FX_RATES: RateTable = {
   USD: { USD: 1,       INR: 83.5,   GBP: 0.789,  EUR: 0.924,  AED: 3.673,  JPY: 151.6  },
   INR: { USD: 0.01198, INR: 1,      GBP: 0.00945, EUR: 0.01107, AED: 0.043,  JPY: 1.816  },
   GBP: { USD: 1.267,   INR: 105.83, GBP: 1,      EUR: 1.171,  AED: 4.653,  JPY: 192.1  },
@@ -20,16 +16,68 @@ const FX_RATES: RateTable = {
   JPY: { USD: 0.00660, INR: 0.5508, GBP: 0.00521, EUR: 0.00610, AED: 0.02422, JPY: 1   },
 };
 
-// ----------------------------
-//  Conversion
-// ----------------------------
+let cachedRateTable: RateTable | null = null;
+let lastFetchTime = 0;
+const CACHE_TTL_MS = 60 * 1000;
 
-export function convert(
+async function fetchLiveRates(): Promise<RateTable> {
+  const now = Date.now();
+  if (cachedRateTable && now - lastFetchTime < CACHE_TTL_MS) {
+    return cachedRateTable;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch('https://open.er-api.com/v6/latest/USD', {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      throw new Error(`HTTP error ${res.status}`);
+    }
+
+    const data = (await res.json()) as any;
+    if (data && data.result === 'success' && data.rates) {
+      const rates: Record<string, number> = data.rates;
+      const currencies: Currency[] = ['USD', 'INR', 'GBP', 'EUR', 'AED', 'JPY'];
+      const newTable: RateTable = {};
+
+      for (const from of currencies) {
+        newTable[from] = {};
+        for (const to of currencies) {
+          const fromRateInUSD = rates[from];
+          const toRateInUSD = rates[to];
+          if (fromRateInUSD && toRateInUSD) {
+            newTable[from][to] = toRateInUSD / fromRateInUSD;
+          } else if (STATIC_FX_RATES[from]?.[to] !== undefined) {
+            newTable[from][to] = STATIC_FX_RATES[from][to];
+          }
+        }
+      }
+
+      cachedRateTable = newTable;
+      lastFetchTime = now;
+      logger.info('FX rates updated from open.er-api.com');
+      return newTable;
+    }
+  } catch (err) {
+    logger.warn('Failed to fetch live FX rates, falling back to static rates', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  return cachedRateTable ?? STATIC_FX_RATES;
+}
+
+export async function convert(
   sourceCurrency: Currency,
   destCurrency: Currency,
   amount: number
-): FxResult {
-  const rateRow = FX_RATES[sourceCurrency];
+): Promise<FxResult> {
+  const rateTable = await fetchLiveRates();
+  const rateRow = rateTable[sourceCurrency];
   if (!rateRow) {
     throw new Error(`FX_UNSUPPORTED: Source currency '${sourceCurrency}' not in rate table`);
   }
@@ -56,18 +104,15 @@ export function convert(
   };
 }
 
-// ----------------------------
-//  Supported Currencies
-// ----------------------------
-
 export function getSupportedCurrencies(): Currency[] {
-  return Object.keys(FX_RATES) as Currency[];
+  return Object.keys(STATIC_FX_RATES) as Currency[];
 }
 
-export function getRate(from: Currency, to: Currency): number | undefined {
-  return FX_RATES[from]?.[to];
+export async function getRate(from: Currency, to: Currency): Promise<number | undefined> {
+  const table = await fetchLiveRates();
+  return table[from]?.[to];
 }
 
-export function getRateTable(): RateTable {
-  return { ...FX_RATES };
+export async function getRateTable(): Promise<RateTable> {
+  return await fetchLiveRates();
 }

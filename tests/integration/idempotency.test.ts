@@ -10,7 +10,7 @@ const USER = 'idemp-user';
 beforeAll(async () => {
   try { await initDatabase(); } catch(e) {}
   token = issueToken(USER);
-  seedKycVerified([USER]);
+  await seedKycVerified([USER]);
 });
 
 afterAll(async () => {
@@ -20,10 +20,11 @@ afterAll(async () => {
 beforeEach(async () => {
   try {
     const db = getDb();
-    await db('idempotency_keys').truncate();
-    await db('accounts').truncate();
-    await db('transactions').truncate();
-    await db('treasury_reserves').truncate();
+    await db('idempotency_keys').del();
+    await db('accounts').del();
+    await db('transactions').del();
+    await db('treasury_reserves').del();
+    await db('settlement_queue').del();
     
     // Setup balances
     await db('accounts').insert({ user_id: USER, currency: 'USD', balance: 5000 });
@@ -115,5 +116,48 @@ describe('Idempotency Middleware Integration', () => {
     expect(res1.status).toBe(200);
     expect(res2.status).toBe(200);
     expect(res1.body.data.txId).not.toBe(res2.body.data.txId);
+  });
+
+  it('should handle simultaneous parallel requests with the SAME key safely without double transfer', async () => {
+    const key = 'simultaneous-race-key';
+
+    const req1 = request(app)
+      .post('/api/transfer')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Idempotency-Key', key)
+      .send({
+        senderId: USER,
+        receiverId: 'bob',
+        amount: 500,
+        sourceCurrency: 'USD',
+        destCurrency: 'EUR'
+      });
+
+    const req2 = request(app)
+      .post('/api/transfer')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Idempotency-Key', key)
+      .send({
+        senderId: USER,
+        receiverId: 'bob',
+        amount: 500,
+        sourceCurrency: 'USD',
+        destCurrency: 'EUR'
+      });
+
+    const [res1, res2] = await Promise.all([req1, req2]);
+
+    // One must succeed with 200, the other must either return 200 (cached via polling) or 409 CONFLICT
+    const okResponses = [res1, res2].filter((r) => r.status === 200);
+    expect(okResponses.length).toBeGreaterThanOrEqual(1);
+
+    // Verify only ONE transaction record was created in the DB
+    const db = getDb();
+    const txCount = await db('transactions').count('* as c').first();
+    expect(Number(txCount?.c)).toBe(1);
+
+    // Sender balance should be 4500 (5000 - 500), NOT 4000
+    const account = await db('accounts').where({ user_id: USER, currency: 'USD' }).first();
+    expect(Number(account.balance)).toBe(4500);
   });
 });

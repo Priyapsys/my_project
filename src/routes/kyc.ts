@@ -21,7 +21,7 @@ const router = Router();
 //  Step 1 — Submit government ID
 //  Body: { idType: "passport"|"national_id"|"driver_license", idNumber: string }
 // ============================================================
-router.post('/submit', authMiddleware, (req: AuthenticatedRequest, res: Response): void => {
+router.post('/submit', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userId = req.userId!;
   const { idType, idNumber } = req.body as { idType: IdType; idNumber: string };
 
@@ -47,7 +47,7 @@ router.post('/submit', authMiddleware, (req: AuthenticatedRequest, res: Response
   }
 
   try {
-    const record = submitIdDocument(userId, idType, idNumber.trim());
+    const record = await submitIdDocument(userId, idType, idNumber.trim());
     logger.success(`KYC step 1 (ID submit) done`, { userId });
 
     res.status(200).json({
@@ -78,7 +78,7 @@ router.post('/submit', authMiddleware, (req: AuthenticatedRequest, res: Response
 //  Step 2 — Submit address proof
 //  Body: { addressProof: string }
 // ============================================================
-router.post('/address', authMiddleware, (req: AuthenticatedRequest, res: Response): void => {
+router.post('/address', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userId = req.userId!;
   const { addressProof } = req.body as { addressProof: string };
 
@@ -93,7 +93,7 @@ router.post('/address', authMiddleware, (req: AuthenticatedRequest, res: Respons
   }
 
   try {
-    const record = submitAddressProof(userId, addressProof.trim());
+    const record = await submitAddressProof(userId, addressProof.trim());
     logger.success(`KYC step 2 (address) done`, { userId });
 
     res.status(200).json({
@@ -126,7 +126,7 @@ router.post('/address', authMiddleware, (req: AuthenticatedRequest, res: Respons
 //  Step 3 — Submit selfie / liveness check
 //  Body: { selfie: string }
 // ============================================================
-router.post('/face', authMiddleware, (req: AuthenticatedRequest, res: Response): void => {
+router.post('/face', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userId = req.userId!;
   const { selfie } = req.body as { selfie: string };
 
@@ -141,7 +141,7 @@ router.post('/face', authMiddleware, (req: AuthenticatedRequest, res: Response):
   }
 
   try {
-    const record = submitFaceVerification(userId, selfie.trim());
+    const record = await submitFaceVerification(userId, selfie.trim());
     logger.success(`KYC step 3 (face) done`, { userId });
 
     res.status(200).json({
@@ -174,9 +174,9 @@ router.post('/face', authMiddleware, (req: AuthenticatedRequest, res: Response):
 //  GET /api/kyc/status
 //  Returns full KYC object for the authenticated user
 // ============================================================
-router.get('/status', authMiddleware, (req: AuthenticatedRequest, res: Response): void => {
+router.get('/status', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userId = req.userId!;
-  const record = getKycRecord(userId);
+  const record = await getKycRecord(userId);
 
   res.status(200).json({
     success: true,

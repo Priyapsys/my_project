@@ -10,7 +10,7 @@ const USER = 'concurrent-user';
 beforeAll(async () => {
   try { await initDatabase(); } catch(e) {}
   token = issueToken(USER);
-  seedKycVerified([USER]);
+  await seedKycVerified([USER]);
 });
 
 afterAll(async () => {
@@ -20,10 +20,15 @@ afterAll(async () => {
 beforeEach(async () => {
   try {
     const db = getDb();
-    await db('idempotency_keys').truncate();
-    await db('accounts').truncate();
-    await db('transactions').truncate();
-    await db('treasury_reserves').truncate();
+    await db('idempotency_keys').del();
+    await db('accounts').del();
+    await db('transactions').del();
+    await db('treasury_reserves').del();
+    await db('settlement_queue').del();
+    await db('kyc_records').del();
+
+    // Re-seed KYC after clearing tables
+    await seedKycVerified([USER]);
     
     // Setup balances
     await db('accounts').insert({ user_id: USER, currency: 'USD', balance: 1000 });

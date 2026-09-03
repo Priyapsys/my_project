@@ -1,24 +1,19 @@
 // ============================================================
-//  IDEMPOTENCY MIDDLEWARE — Replay Protection for Write Endpoints
-// ============================================================
-//
-//  Pattern: Standard idempotency-key middleware.
-//
-//  1. Read `Idempotency-Key` header from request.
-//  2. If missing on a write endpoint → 422 Unprocessable Entity.
-//  3. Look up (key, endpoint) in `idempotency_keys` table.
-//  4. If found → return cached response (same status code + body).
-//  5. If not found → proceed with handler, intercept the response,
-//     store (key, endpoint, status, body) in DB, then send response.
-//
-//  Key is scoped per endpoint path to prevent cross-endpoint collisions.
-//  E.g., the same key used on /api/transfer and /api/settlement/run
-//  are treated as separate entries.
+//  IDEMPOTENCY MIDDLEWARE — Replay & Race Protection for Write Endpoints
 // ============================================================
 
 import { Request, Response, NextFunction } from 'express';
 import { getDb } from '../db/connection';
 import { logger } from '../utils/logger';
+
+function isUniqueViolation(err: any): boolean {
+  return (
+    err?.code === '23505' ||
+    err?.code === 'SQLITE_CONSTRAINT' ||
+    err?.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+    (typeof err?.message === 'string' && err.message.includes('UNIQUE constraint failed'))
+  );
+}
 
 /**
  * Express middleware that enforces idempotency on write endpoints.
@@ -44,7 +39,6 @@ export function idempotencyMiddleware(
   const endpoint = req.baseUrl + req.path;
   const key = idempotencyKey.trim();
 
-  // Check for cached response
   handleIdempotency(key, endpoint, req, res, next).catch((err) => {
     logger.error('Idempotency middleware error', {
       error: err instanceof Error ? err.message : String(err),
@@ -56,55 +50,83 @@ export function idempotencyMiddleware(
 async function handleIdempotency(
   key: string,
   endpoint: string,
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
   const db = getDb();
 
-  // Look up existing entry
-  const existing = await db('idempotency_keys')
-    .where({ key, endpoint })
-    .first();
-
-  if (existing) {
-    // Cache hit — return the original response
-    logger.info(`Idempotency cache hit`, { key, endpoint });
-    const body = typeof existing.response_body === 'string'
-      ? JSON.parse(existing.response_body)
-      : existing.response_body;
-    res.status(existing.status_code).json(body);
-    return;
+  // Try to insert the idempotency lock record BEFORE executing the handler
+  try {
+    await db('idempotency_keys').insert({
+      key,
+      endpoint,
+      status_code: 0,
+      response_body: null,
+    });
+  } catch (err: any) {
+    if (isUniqueViolation(err)) {
+      // Lock exists — poll for result or return cached response
+      return await pollAndReturnCachedResponse(key, endpoint, res);
+    }
+    throw err;
   }
 
-  // Cache miss — intercept the response to capture it
+  // Insert succeeded — we hold the lock. Intercept response to update DB when handler finishes.
   const originalJson = res.json.bind(res);
 
   res.json = function (body: any): Response {
-    // Store the response in the idempotency table (fire-and-forget; errors logged but not fatal)
     db('idempotency_keys')
-      .insert({
-        key,
-        endpoint,
+      .where({ key, endpoint })
+      .update({
         status_code: res.statusCode,
         response_body: JSON.stringify(body),
       })
-      .catch((insertErr) => {
-        // If this is a duplicate key error (race condition — two identical requests
-        // arriving simultaneously), it's safe to ignore. The first one wins.
-        if (insertErr?.code === '23505') {
-          logger.debug('Idempotency key race: duplicate insert ignored', { key, endpoint });
-        } else {
-          logger.error('Failed to store idempotency key', {
-            error: insertErr instanceof Error ? insertErr.message : String(insertErr),
-            key,
-            endpoint,
-          });
-        }
+      .catch((updateErr) => {
+        logger.error('Failed to update idempotency key record', {
+          error: updateErr instanceof Error ? updateErr.message : String(updateErr),
+          key,
+          endpoint,
+        });
       });
 
     return originalJson(body);
   };
 
   next();
+}
+
+async function pollAndReturnCachedResponse(
+  key: string,
+  endpoint: string,
+  res: Response
+): Promise<void> {
+  const db = getDb();
+  const MAX_ATTEMPTS = 30; // 3 seconds max (30 x 100ms)
+  const POLL_INTERVAL_MS = 100;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const existing = await db('idempotency_keys')
+      .where({ key, endpoint })
+      .first();
+
+    if (existing && existing.status_code !== 0 && existing.response_body !== null) {
+      logger.info(`Idempotency cache hit via polling`, { key, endpoint });
+      const body = typeof existing.response_body === 'string'
+        ? JSON.parse(existing.response_body)
+        : existing.response_body;
+      res.status(existing.status_code).json(body);
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+  }
+
+  logger.warn(`Idempotency race conflict`, { key, endpoint });
+  res.status(409).json({
+    success: false,
+    error: 'Concurrent request with the same idempotency key is still in progress',
+    code: 'CONFLICT',
+    timestamp: new Date().toISOString(),
+  });
 }

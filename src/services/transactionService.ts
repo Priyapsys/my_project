@@ -121,7 +121,7 @@ export async function executeTransfer(
   //  (unsupported pair), no side effects need rollback.
   let fx;
   try {
-    fx = convert(sourceCurrency, destCurrency, amount);
+    fx = await convert(sourceCurrency, destCurrency, amount);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new FxError(message);
@@ -136,13 +136,13 @@ export async function executeTransfer(
   let tx: Transaction;
 
   await db.transaction(async (trx) => {
-    // Step 3: Treasury liquidity validation (with row lock)
-    const liquidity = await validateLiquidity(sourceCurrency, amount, trx);
+    // Step 3: Treasury liquidity validation (with row lock on destCurrency payout reserve)
+    const liquidity = await validateLiquidity(destCurrency, fx.convertedAmount, trx);
     if (!liquidity.valid) {
       throw new InsufficientLiquidityError(
         liquidity.available,
         liquidity.required,
-        sourceCurrency
+        destCurrency
       );
     }
 
@@ -161,9 +161,9 @@ export async function executeTransfer(
       credit: `${receiverId} +${fx.convertedAmount} ${destCurrency}`,
     });
 
-    // Step 7: Treasury update
-    await deductReserve(sourceCurrency, amount, trx);
-    await addReserve(destCurrency, fx.convertedAmount, trx);
+    // Step 7: Treasury update (payout destCurrency, receive sourceCurrency)
+    await deductReserve(destCurrency, fx.convertedAmount, trx);
+    await addReserve(sourceCurrency, amount, trx);
 
     // Step 8: Build & store transaction record
     tx = {
@@ -187,12 +187,8 @@ export async function executeTransfer(
   });
 
   // ── Step 9: Push to Settlement Queue (AFTER commit) ────────
-  //  Runs outside the DB transaction. The settlement queue is
-  //  in-memory. If the server crashes between commit and enqueue,
-  //  the transaction is already persisted in the DB. A future
-  //  settlement sweep can pick up un-batched transactions.
-  //  FLAG: Settlement queue persistence is deferred to a future pass.
-  enqueue(tx!);
+  //  Persisted in PostgreSQL/SQLite settlement_queue table.
+  await enqueue(tx!);
 
   // ── Step 10: Return Response ───────────────────────────────
   logger.success(`Transfer complete`, { txId });
