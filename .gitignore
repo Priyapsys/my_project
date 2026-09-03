@@ -22,7 +22,11 @@ out
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
+test-results/
 
-# private keys
+# private keys & databases
 .wallet.json
 globalpay.sqlite
+.env
+
