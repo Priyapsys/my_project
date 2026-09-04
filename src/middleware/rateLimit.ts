@@ -11,7 +11,7 @@ export const transferRateLimiter = rateLimit({
   keyGenerator: (req) => {
     return (req as AuthenticatedRequest).userId || req.ip || 'anonymous';
   },
-  validate: { trustProxy: false, xForwardedForHeader: false, default: false },
+  validate: { trustProxy: process.env.TRUST_PROXY === 'true', xForwardedForHeader: false, default: false },
   handler: (_req, res) => {
     res.status(429).json({
       success: false,

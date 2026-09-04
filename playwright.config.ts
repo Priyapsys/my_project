@@ -31,6 +31,8 @@ export default defineConfig({
       env: {
         JWT_SECRET: 'test-secret-for-e2e-only',
         NODE_ENV: 'test',
+        STRIPE_TEST_KEY: 'sk_test_mock',
+        STRIPE_WEBHOOK_SECRET: 'whsec_mock',
       },
     },
     {

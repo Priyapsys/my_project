@@ -16,6 +16,9 @@ import settlementRoute from './routes/settlement';
 import balanceRoute    from './routes/balance';
 import txRoute         from './routes/transactions';
 import testRoute       from './routes/test';
+import depositRoute    from './routes/deposit';
+import withdrawRoute   from './routes/withdraw';
+import webhookRoute    from './routes/webhooks';
 
 // ── Modules ─────────────────────────────────────────────────
 import { seedBalances }    from './modules/ledger';
@@ -73,6 +76,9 @@ async function seed(): Promise<void> {
 const app = express();
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 
+// ── Stripe Webhook (raw body — MUST be before express.json()) ─
+app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }), webhookRoute);
+
 // ── Core Middleware ──────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -91,6 +97,8 @@ app.use('/api/settlement',  settlementRoute);
 app.use('/api/balance',     balanceRoute);
 app.use('/api/transactions', txRoute);
 app.use('/api/test',         testRoute);
+app.use('/api/deposit',      depositRoute);
+app.use('/api/withdraw',     withdrawRoute);
 
 // ── Health Check ─────────────────────────────────────────────
 app.get('/health', (_req: Request, res: Response) => {
@@ -112,6 +120,8 @@ app.get('/api', (_req: Request, res: Response) => {
       auth:        'POST /api/login',
       kyc:         'POST /api/kyc/submit | POST /api/kyc/address | POST /api/kyc/face | GET /api/kyc/status',
       transfer:    'POST /api/transfer  (requires Idempotency-Key header)',
+      deposit:     'POST /api/deposit',
+      withdraw:    'POST /api/withdraw',
       settlement:  'POST /api/settlement/run (requires Idempotency-Key header) | GET /api/settlement/status | GET /api/settlement/history',
       balance:     'GET /api/balance/:userId | GET /api/balance',
       transactions:'GET /api/transactions/:userId',
