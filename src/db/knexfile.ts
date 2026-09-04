@@ -15,13 +15,14 @@ import type { Knex } from 'knex';
 import path from 'path';
 
 const connection: Knex.PgConnectionConfig = process.env.DATABASE_URL
-  ? { connectionString: process.env.DATABASE_URL }
+  ? { connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 2000 }
   : {
       host: process.env.DB_HOST ?? 'localhost',
       port: parseInt(process.env.DB_PORT ?? '5432', 10),
       database: process.env.DB_NAME ?? 'globalpay',
       user: process.env.DB_USER ?? 'postgres',
       password: process.env.DB_PASSWORD ?? 'postgres',
+      connectionTimeoutMillis: 2000,
     };
 
 const config: Knex.Config = {

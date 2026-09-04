@@ -80,7 +80,7 @@ router.get('/history', authMiddleware, async (req: AuthenticatedRequest, res: Re
         status:           r.txHash ? 'VERIFIED' : 'PENDING',
         transactionCount: r.batch.transactionCount,
         totalVolume:      r.batch.totalVolume,
-        anchoredAt:       r.anchoredAt.toISOString(),
+        anchoredAt:       r.anchoredAt ? (r.anchoredAt instanceof Date ? r.anchoredAt.toISOString() : new Date(r.anchoredAt).toISOString()) : new Date().toISOString(),
       })),
     },
     timestamp: new Date().toISOString(),

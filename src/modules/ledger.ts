@@ -18,7 +18,7 @@ import { Knex } from 'knex';
 import { Currency, CurrencyBalances, Transaction } from '../utils/types';
 import { logger } from '../utils/logger';
 import { getDb } from '../db/connection';
-import { InsufficientBalanceError, LedgerWriteError } from '../utils/errors';
+import { InsufficientBalanceError, LedgerWriteError, ConcurrentUpdateError } from '../utils/errors';
 
 // ----------------------------
 //  Helper: get query builder, optionally scoped to a transaction
@@ -73,7 +73,8 @@ export async function setBalance(
   userId: string,
   currency: Currency,
   amount: number,
-  trx?: Knex.Transaction
+  trx?: Knex.Transaction,
+  expectedVersion?: number
 ): Promise<void> {
   const rounded = parseFloat(amount.toFixed(4));
   const table = accountsTable(trx);
@@ -84,13 +85,18 @@ export async function setBalance(
     .first();
 
   if (existing) {
-    await accountsTable(trx)
-      .where({ user_id: userId, currency })
+    const versionToMatch = expectedVersion !== undefined ? expectedVersion : Number(existing.version);
+    const updated = await accountsTable(trx)
+      .where({ user_id: userId, currency, version: versionToMatch })
       .update({
         balance: rounded,
-        version: getDb().raw('version + 1'),
+        version: versionToMatch + 1,
         updated_at: new Date(),
       });
+
+    if (updated === 0) {
+      throw new ConcurrentUpdateError(`Concurrent update detected for user ${userId} currency ${currency}`);
+    }
   } else {
     await table.insert({
       user_id: userId,

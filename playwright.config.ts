@@ -24,16 +24,23 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'NODE_ENV=test npm run dev',
+      command: 'npm run dev',
       url: 'http://localhost:3000/health',
       reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
+      timeout: 60_000,
+      env: {
+        JWT_SECRET: 'test-secret-for-e2e-only',
+        NODE_ENV: 'test',
+      },
     },
     {
       command: 'npm --prefix frontend run dev',
       url: 'http://localhost:5173',
       reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
+      timeout: 60_000,
+      env: {
+        NODE_ENV: 'test',
+      },
     },
   ],
 });

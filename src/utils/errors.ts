@@ -115,3 +115,12 @@ export class SettlementAnchorFailedError extends DomainError {
     super('SETTLEMENT_ANCHOR_FAILED', message);
   }
 }
+
+/**
+ * Concurrent update detected on account balance.
+ */
+export class ConcurrentUpdateError extends DomainError {
+  constructor(message = 'Concurrent update detected on account balance') {
+    super('CONCURRENT_UPDATE', message);
+  }
+}

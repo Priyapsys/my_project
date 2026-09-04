@@ -70,11 +70,11 @@ test.describe('Blockchain Settlement Engine Flow', () => {
     // 5. Assert latest settlement card appears with VERIFIED status
     await expect(page.getByTestId('latest-settlement-section')).toBeVisible({ timeout: 45_000 });
     await expect(page.getByTestId('settlement-status-badge')).toContainText('VERIFIED');
-    await expect(page.getByTestId('settlement-batch-id')).not.toBeEmpty();
+    await expect(page.getByTestId('latest-settlement-section').getByTestId('settlement-batch-id')).not.toBeEmpty();
 
     // Assert link to Solana blockchain proof is rendered
-    await expect(page.getByTestId('view-proof-button')).toBeVisible();
-    await expect(page.getByTestId('view-proof-button')).toHaveAttribute('href', /solana\.com/);
+    await expect(page.getByTestId('latest-settlement-section').getByTestId('view-proof-button')).toBeVisible();
+    await expect(page.getByTestId('latest-settlement-section').getByTestId('view-proof-button')).toHaveAttribute('href', /solana\.com/);
 
     // 6. Confirm pending queue size resets to 0
     await expect(page.getByTestId('settlement-queue-size')).toHaveText('0');

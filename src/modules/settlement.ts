@@ -159,17 +159,12 @@ export async function flushQueue(): Promise<Transaction[]> {
       })
       .returning('*');
   } catch (err) {
-    // Fallback transaction if returning('*') is not supported by driver
-    rows = await db.transaction(async (trx) => {
-      const pending = await trx('settlement_queue').where({ status: 'pending' }).orderBy('created_at', 'asc');
-      if (pending.length === 0) return [];
-      const ids = pending.map((r: any) => r.id);
-      await trx('settlement_queue').whereIn('id', ids).update({
-        status: 'processing',
-        processed_at: new Date(),
-      });
-      return pending;
-    });
+    // Atomic SQLite query with RETURNING * syntax to eliminate race window
+    const rawRes = await db.raw(
+      `UPDATE settlement_queue SET status = 'processing', processed_at = ? WHERE status = 'pending' RETURNING *`,
+      [new Date().toISOString()]
+    );
+    rows = Array.isArray(rawRes) ? rawRes : (rawRes?.rows ?? rawRes ?? []);
   }
 
   const drained = rows.map(mapRowToTransaction);

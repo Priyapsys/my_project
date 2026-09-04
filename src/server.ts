@@ -143,6 +143,8 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
+import { reconcilePendingBatches } from './services/blockchainService';
+
 // ============================================================
 //  START — Initialize DB, run migrations, seed, then listen
 // ============================================================
@@ -154,6 +156,18 @@ async function start(): Promise<void> {
 
     // Seed demo data (idempotent thanks to ON CONFLICT)
     await seed();
+
+    // Start reconciliation worker every 5 minutes
+    setInterval(async () => {
+      try {
+        const result = await reconcilePendingBatches();
+        logger.info('Reconciliation worker completed', result);
+      } catch (err) {
+        logger.error('Reconciliation worker failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }, 5 * 60 * 1000);
 
     app.listen(PORT, () => {
       logger.success(`Server running on http://localhost:${PORT}`);
@@ -181,7 +195,7 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-if (process.env.NODE_ENV !== 'test') {
+if (require.main === module) {
   start();
 }
 

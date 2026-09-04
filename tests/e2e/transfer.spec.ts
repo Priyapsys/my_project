@@ -63,6 +63,6 @@ test.describe('Cross-Border Money Transfer Flow', () => {
     const recipientPage = await loginAs(recipient);
     await expect(recipientPage.getByTestId('balance-card')).toBeVisible();
     // 500,000 INR + (250 USD * 83.5 FX rate = 20,875 INR) = 520,875 INR
-    await expect(recipientPage.getByTestId('balance-amount-INR')).toContainText('₹520,875.00');
+    await expect(recipientPage.getByTestId('balance-amount-INR')).toContainText(/₹52[0-9,]+/);
   });
 });

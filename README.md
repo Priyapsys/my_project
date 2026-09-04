@@ -6,7 +6,7 @@ GlobalPay is a production-grade, modular financial system designed to process cr
 
 * **Instant Transaction Ledger**: In-memory optimized ledger executes transfers with sub-second latency.
 * **Batch Settlement**: Groups multiple transactions to drastically reduce blockchain settlement costs.
-* **Immutable Proof**: Anchors transaction batches to a public or private blockchain layer.
+* **Settlement Proof Anchor**: Anchors transaction batch cryptographic hashes to a public blockchain layer (Solana Devnet) for immutable proof-of-existence and cost-optimized verification without executing complex on-chain smart contracts.
 * **Streamlined KYC**: A 3-step simulated flow capturing essential compliance details with liveness checks.
 * **Modern Frontend**: A fully responsive interface built with React and Vite featuring dynamic routing, clean CSS styles, and interactive settlement panels.
 * **Modular Backend Architecture**: Clean Node.js (TypeScript) environment decoupling FX conversions, treasury, compliance, and ledger management.

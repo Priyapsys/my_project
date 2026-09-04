@@ -1,5 +1,9 @@
 // ============================================================
-//  BLOCKCHAIN MODULE — Real Solana Devnet Settlement Anchor
+//  BLOCKCHAIN MODULE — Real Solana Devnet Settlement Proof Anchor
+// ============================================================
+// NOTE: The Solana SPL Memo program is utilized strictly as a
+//       Settlement Proof Anchor / proof-of-existence mechanism for
+//       batch hashes, NOT for smart contract settlement execution.
 // ============================================================
 
 import {

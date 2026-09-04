@@ -86,6 +86,11 @@ describe('Idempotency Middleware Integration', () => {
     // Should be exactly the same response
     expect(res2.status).toBe(200);
     expect(res2.body.data.txId).toBe(txId); // Same transaction ID, no new transfer made
+
+    // Verify balance change matches exactly one transfer (5000 - 100 = 4900), not two
+    const db = getDb();
+    const account = await db('accounts').where({ user_id: USER, currency: 'USD' }).first();
+    expect(Number(account.balance)).toBe(4900);
   });
 
   it('should process a new request if the key is different', async () => {
