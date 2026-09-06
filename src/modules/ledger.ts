@@ -120,16 +120,46 @@ export async function updateBalance(
   return updated;
 }
 
+export async function getPendingWithdrawalHolds(
+  userId: string,
+  currency: Currency,
+  trx?: Knex.Transaction,
+  excludeRequestId?: string
+): Promise<number> {
+  const db = trx ?? getDb();
+  let query = db('withdrawal_requests')
+    .where({ user_id: userId, currency, status: 'pending' });
+
+  if (excludeRequestId) {
+    query = query.whereNot({ id: excludeRequestId });
+  }
+
+  const row = await query.sum('amount as totalHold').first();
+  return row && row.totalHold ? parseFloat(String(row.totalHold)) : 0;
+}
+
+export async function getAvailableBalance(
+  userId: string,
+  currency: Currency,
+  trx?: Knex.Transaction,
+  excludeRequestId?: string
+): Promise<number> {
+  const total = await getBalanceForCurrency(userId, currency, trx);
+  const hold = await getPendingWithdrawalHolds(userId, currency, trx, excludeRequestId);
+  return Math.max(0, parseFloat((total - hold).toFixed(4)));
+}
+
 export async function debit(
   userId: string,
   currency: Currency,
   amount: number,
-  trx?: Knex.Transaction
+  trx?: Knex.Transaction,
+  excludeRequestId?: string
 ): Promise<void> {
-  // getBalanceForCurrency already acquires FOR UPDATE lock when trx is provided
-  const current = await getBalanceForCurrency(userId, currency, trx);
-  if (current < amount) {
-    throw new InsufficientBalanceError(userId, current, amount, currency);
+  // getAvailableBalance acquires FOR UPDATE lock via getBalanceForCurrency when trx is provided
+  const available = await getAvailableBalance(userId, currency, trx, excludeRequestId);
+  if (available < amount) {
+    throw new InsufficientBalanceError(userId, available, amount, currency);
   }
   await updateBalance(userId, currency, -amount, trx);
 }

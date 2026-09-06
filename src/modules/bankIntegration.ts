@@ -8,8 +8,10 @@
 // ============================================================
 
 import Stripe from 'stripe';
+import { Knex } from 'knex';
 import { logger } from '../utils/logger';
 import { DomainError } from '../utils/errors';
+import { getDb } from '../db/connection';
 
 // ── Custom Error ────────────────────────────────────────────
 
@@ -21,19 +23,20 @@ export class BankIntegrationError extends DomainError {
 
 // ── Stripe Initialization ───────────────────────────────────
 
-let stripe: Stripe | null = null;
-
 function getStripe(): Stripe {
   const stripeKey = process.env.STRIPE_TEST_KEY;
   if (!stripeKey) {
-    throw new BankIntegrationError('STRIPE_TEST_KEY environment variable is not set');
+    throw new BankIntegrationError('STRIPE_TEST_KEY environment variable is not set. Obtain a free test mode key from Stripe dashboard -> Developers -> API keys (test mode).');
   }
-  if (!stripe) {
-    stripe = new Stripe(stripeKey, {
-      apiVersion: '2024-06-20' as any,
-    });
+  if (stripeKey.startsWith('sk_live_')) {
+    throw new BankIntegrationError('Live Stripe key detected (sk_live_...). Safety guard blocked execution. Only Stripe test mode keys starting with "sk_test_" are allowed.');
   }
-  return stripe;
+  if (!stripeKey.startsWith('sk_test_')) {
+    throw new BankIntegrationError('Invalid STRIPE_TEST_KEY format. Key must start with "sk_test_". Obtain a free test mode key from Stripe dashboard -> Developers -> API keys (test mode).');
+  }
+  return new Stripe(stripeKey, {
+    apiVersion: '2024-06-20' as any,
+  });
 }
 
 // ── Deposit (PaymentIntent) ─────────────────────────────────
@@ -54,26 +57,6 @@ export async function createDepositIntent(
 ): Promise<DepositResult> {
   if (!amount || amount <= 0) {
     throw new BankIntegrationError('Deposit amount must be greater than zero');
-  }
-
-  const stripeKey = process.env.STRIPE_TEST_KEY;
-  if (!stripeKey) {
-    throw new BankIntegrationError('STRIPE_TEST_KEY environment variable is not set');
-  }
-
-  // Support for mock key during testing / offline mode
-  if (stripeKey.startsWith('sk_test_mock') || process.env.NODE_ENV === 'test') {
-    const mockId = `pi_mock_${Date.now()}`;
-    logger.info('Deposit PaymentIntent created (mock)', {
-      userId,
-      paymentIntentId: mockId,
-      amount,
-      currency,
-    });
-    return {
-      clientSecret: `${mockId}_secret_mock`,
-      paymentIntentId: mockId,
-    };
   }
 
   try {
@@ -126,26 +109,6 @@ export async function processWithdrawal(
     throw new BankIntegrationError('Withdrawal amount must be greater than zero');
   }
 
-  const stripeKey = process.env.STRIPE_TEST_KEY;
-  if (!stripeKey) {
-    throw new BankIntegrationError('STRIPE_TEST_KEY environment variable is not set');
-  }
-
-  // Support for mock key during testing / offline mode
-  if (stripeKey.startsWith('sk_test_mock') || process.env.NODE_ENV === 'test') {
-    const mockId = `tr_mock_${Date.now()}`;
-    logger.info('Withdrawal Transfer created (mock)', {
-      userId,
-      transferId: mockId,
-      amount,
-      destination: destinationAccountId,
-    });
-    return {
-      transferId: mockId,
-      status: 'paid',
-    };
-  }
-
   try {
     const s = getStripe();
     const transfer = await s.transfers.create({
@@ -167,7 +130,7 @@ export async function processWithdrawal(
 
     return {
       transferId: transfer.id,
-      status: transfer.object || 'paid',
+      status: (transfer as any).status || 'pending',
     };
   } catch (err) {
     if (err instanceof BankIntegrationError) throw err;
@@ -175,6 +138,146 @@ export async function processWithdrawal(
     logger.error('Failed to create withdrawal Transfer', { userId, error: message });
     throw new BankIntegrationError(`Withdrawal failed: ${message}`);
   }
+}
+
+// ── Withdrawal Requests Store Helpers ───────────────────────
+
+export interface WithdrawalRequestRecord {
+  id: string;
+  user_id: string;
+  amount: number;
+  currency: string;
+  stripe_transfer_id: string | null;
+  status: 'pending' | 'completed' | 'failed';
+  created_at: Date;
+  updated_at: Date;
+}
+
+export async function createWithdrawalRecord(
+  record: {
+    id: string;
+    userId: string;
+    amount: number;
+    currency?: string;
+    status?: 'pending' | 'completed' | 'failed';
+  },
+  trx?: Knex.Transaction
+): Promise<WithdrawalRequestRecord> {
+  const db = trx ?? getDb();
+  const now = new Date();
+  const data = {
+    id: record.id,
+    user_id: record.userId,
+    amount: record.amount,
+    currency: record.currency || 'USD',
+    stripe_transfer_id: null,
+    status: record.status || 'pending',
+    created_at: now,
+    updated_at: now,
+  };
+  await db('withdrawal_requests').insert(data);
+  return {
+    ...data,
+    amount: parseFloat(String(data.amount)),
+  };
+}
+
+export async function updateWithdrawalStripeTransferId(
+  id: string,
+  stripeTransferId: string,
+  trx?: Knex.Transaction
+): Promise<void> {
+  const db = trx ?? getDb();
+  await db('withdrawal_requests')
+    .where({ id })
+    .update({
+      stripe_transfer_id: stripeTransferId,
+      updated_at: new Date(),
+    });
+}
+
+export async function updateWithdrawalStatus(
+  idOrTransferId: string,
+  status: 'pending' | 'completed' | 'failed',
+  trx?: Knex.Transaction
+): Promise<boolean> {
+  const db = trx ?? getDb();
+  const updated = await db('withdrawal_requests')
+    .where(function () {
+      this.where({ id: idOrTransferId }).orWhere({ stripe_transfer_id: idOrTransferId });
+    })
+    .where({ status: 'pending' })
+    .update({
+      status,
+      updated_at: new Date(),
+    });
+  return updated > 0;
+}
+
+export async function getWithdrawalRecordByTransferId(
+  stripeTransferId: string,
+  trx?: Knex.Transaction
+): Promise<WithdrawalRequestRecord | null> {
+  const db = trx ?? getDb();
+  let query = db('withdrawal_requests')
+    .where(function () {
+      this.where({ stripe_transfer_id: stripeTransferId }).orWhere({ id: stripeTransferId });
+    })
+    .first();
+  if (trx) {
+    query = query.forUpdate();
+  }
+  const row = await query;
+  if (!row) return null;
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    amount: parseFloat(String(row.amount)),
+    currency: row.currency,
+    stripe_transfer_id: row.stripe_transfer_id,
+    status: row.status,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  };
+}
+
+export async function getWithdrawalRecordById(
+  id: string,
+  trx?: Knex.Transaction
+): Promise<WithdrawalRequestRecord | null> {
+  const db = trx ?? getDb();
+  const row = await db('withdrawal_requests').where({ id }).first();
+  if (!row) return null;
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    amount: parseFloat(String(row.amount)),
+    currency: row.currency,
+    stripe_transfer_id: row.stripe_transfer_id,
+    status: row.status,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  };
+}
+
+export async function getUserWithdrawalRecords(
+  userId: string,
+  trx?: Knex.Transaction
+): Promise<WithdrawalRequestRecord[]> {
+  const db = trx ?? getDb();
+  const rows = await db('withdrawal_requests')
+    .where({ user_id: userId })
+    .orderBy('created_at', 'desc');
+  return rows.map((row) => ({
+    id: row.id,
+    user_id: row.user_id,
+    amount: parseFloat(String(row.amount)),
+    currency: row.currency,
+    stripe_transfer_id: row.stripe_transfer_id,
+    status: row.status,
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  }));
 }
 
 // ── Webhook Verification ────────────────────────────────────
@@ -229,7 +332,8 @@ export function handleStripeWebhook(
     }
 
     case 'transfer.paid':
-    case 'transfer.created': {
+    case 'transfer.created':
+    case 'transfer.failed': {
       const tr = (event as any).data.object as Stripe.Transfer;
       return {
         type: event.type,
@@ -250,4 +354,3 @@ export function handleStripeWebhook(
       };
   }
 }
-

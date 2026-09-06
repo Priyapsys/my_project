@@ -3,17 +3,28 @@
 // ============================================================
 
 import { Router, Response } from 'express';
+import { v4 as uuidv4 } from 'uuid';
 import { authMiddleware } from '../middleware/auth';
-import { processWithdrawal, BankIntegrationError } from '../modules/bankIntegration';
-import { debit } from '../modules/ledger';
+import {
+  processWithdrawal,
+  BankIntegrationError,
+  createWithdrawalRecord,
+  updateWithdrawalStripeTransferId,
+  updateWithdrawalStatus,
+  getWithdrawalRecordById,
+  getUserWithdrawalRecords,
+} from '../modules/bankIntegration';
+import { getAvailableBalance } from '../modules/ledger';
 import { AuthenticatedRequest } from '../utils/types';
 import { logger } from '../utils/logger';
-import { DomainError } from '../utils/errors';
+import { DomainError, InsufficientBalanceError } from '../utils/errors';
+import { getDb } from '../db/connection';
 
 const router = Router();
 
-// POST /api/withdraw — debit internal ledger then create Stripe Transfer
+// POST /api/withdraw — Place hold on internal ledger balance then create Stripe Transfer
 router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  let requestId: string | null = null;
   try {
     const { amount, destinationAccountId } = req.body || {};
     const userId = req.userId!;
@@ -39,21 +50,58 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
       return;
     }
 
-    // ── Debit Internal Ledger First ───────────────────────────
-    // This ensures the user has sufficient balance before initiating Stripe Transfer
-    await debit(userId, 'USD', amount);
-    logger.info('Withdrawal ledger debit succeeded', { userId, amount });
+    // ── Hold Approach (Reserved-Balance Mechanism) ───────────
+    // WE CHOSE THE HOLD APPROACH: Rather than debiting user ledger immediately,
+    // we validate available balance and create a `withdrawal_requests` record with
+    // status `pending`. This places a hold on the user's available balance
+    // (available balance = total balance - sum of pending holds).
+    // Final ledger debit happens ONLY once confirmed via `transfer.paid` webhook
+    // (matching the deposit flow pattern). If the Stripe call or transfer fails,
+    // status is set to `failed` which releases the hold without requiring compensating debits.
+
+    const db = getDb();
+    requestId = uuidv4();
+
+    // Check available balance and create pending request atomically inside a transaction
+    await db.transaction(async (trx) => {
+      const available = await getAvailableBalance(userId, 'USD', trx);
+      if (available < amount) {
+        throw new InsufficientBalanceError(userId, available, amount, 'USD');
+      }
+
+      await createWithdrawalRecord(
+        {
+          id: requestId!,
+          userId,
+          amount,
+          currency: 'USD',
+          status: 'pending',
+        },
+        trx
+      );
+    });
+
+    logger.info('Withdrawal hold placed', { userId, amount, requestId });
 
     // ── Create Stripe Transfer ────────────────────────────────
-    const result = await processWithdrawal(userId, amount, destinationAccountId);
+    let result;
+    try {
+      result = await processWithdrawal(userId, amount, destinationAccountId);
+      await updateWithdrawalStripeTransferId(requestId, result.transferId);
+    } catch (stripeErr) {
+      // If Stripe transfer creation fails, mark withdrawal request as failed to release hold
+      await updateWithdrawalStatus(requestId, 'failed');
+      throw stripeErr;
+    }
 
-    logger.info('Withdrawal Transfer created', { userId, amount, transferId: result.transferId });
+    logger.info('Withdrawal Transfer created', { userId, amount, transferId: result.transferId, requestId });
 
     res.status(200).json({
       success: true,
       data: {
+        requestId,
         transferId: result.transferId,
-        status: result.status,
+        status: 'pending',
       },
       timestamp: new Date().toISOString(),
     });
@@ -68,6 +116,58 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
       success: false,
       error: message,
       code,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// GET /api/withdraw — list user's withdrawal requests
+router.get('/', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    const records = await getUserWithdrawalRecords(userId);
+
+    res.status(200).json({
+      success: true,
+      data: records,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to fetch withdrawal requests';
+    res.status(500).json({
+      success: false,
+      error: message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// GET /api/withdraw/:id — fetch status of a specific withdrawal request
+router.get('/:id', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const record = await getWithdrawalRecordById(id);
+
+    if (!record) {
+      res.status(404).json({
+        success: false,
+        error: 'Withdrawal request not found',
+        code: 'NOT_FOUND',
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: record,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to fetch withdrawal status';
+    res.status(500).json({
+      success: false,
+      error: message,
       timestamp: new Date().toISOString(),
     });
   }

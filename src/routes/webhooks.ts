@@ -7,10 +7,16 @@
 // ============================================================
 
 import { Router, Request, Response } from 'express';
-import { handleStripeWebhook, BankIntegrationError } from '../modules/bankIntegration';
-import { credit } from '../modules/ledger';
+import {
+  handleStripeWebhook,
+  BankIntegrationError,
+  getWithdrawalRecordByTransferId,
+  updateWithdrawalStatus,
+} from '../modules/bankIntegration';
+import { credit, debit } from '../modules/ledger';
 import { Currency } from '../utils/types';
 import { logger } from '../utils/logger';
+import { getDb } from '../db/connection';
 
 const router = Router();
 
@@ -39,8 +45,60 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
       case 'transfer.paid': {
         const { userId, transferId, amount } = event.data;
-        logger.info('Withdrawal transfer completed', { userId, transferId, amount });
-        // Withdrawal already debited from ledger at request time — this is confirmation only
+        if (transferId) {
+          const db = getDb();
+          await db.transaction(async (trx) => {
+            const record = await getWithdrawalRecordByTransferId(transferId, trx);
+            if (record && record.status === 'pending') {
+              const debitUser = userId || record.user_id;
+              const debitAmount = amount || record.amount;
+              const debitCurrency = (record.currency || 'USD') as Currency;
+
+              // Finalize debit on ledger when Stripe transfer completes
+              await debit(debitUser, debitCurrency, debitAmount, trx, record.id);
+              await updateWithdrawalStatus(record.id, 'completed', trx);
+
+              logger.info('Withdrawal transfer paid & ledger debited', {
+                userId: debitUser,
+                transferId,
+                amount: debitAmount,
+                requestId: record.id,
+              });
+            } else {
+              logger.info('Withdrawal transfer.paid ignored (already processed or unknown)', {
+                transferId,
+                recordStatus: record?.status,
+              });
+            }
+          });
+        }
+        break;
+      }
+
+      case 'transfer.failed': {
+        const { transferId } = event.data;
+        if (transferId) {
+          const db = getDb();
+          await db.transaction(async (trx) => {
+            const record = await getWithdrawalRecordByTransferId(transferId, trx);
+            if (record && record.status === 'pending') {
+              // Marking withdrawal request status as failed releases the pending hold.
+              // Balance was not debited, so no ledger update is required. Idempotent check ensures duplicate webhooks do nothing.
+              await updateWithdrawalStatus(record.id, 'failed', trx);
+
+              logger.info('Withdrawal transfer failed & hold released', {
+                transferId,
+                requestId: record.id,
+                userId: record.user_id,
+              });
+            } else {
+              logger.info('Withdrawal transfer.failed ignored (already processed or unknown)', {
+                transferId,
+                recordStatus: record?.status,
+              });
+            }
+          });
+        }
         break;
       }
 
