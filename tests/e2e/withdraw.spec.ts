@@ -27,17 +27,11 @@ test.describe('Withdraw Workflow', () => {
 
     const body = await withdrawRes.json();
 
-    // If Stripe key is configured, we expect 200 with transferId
-    // If not configured, we expect a bank integration error (but ledger debit may have occurred)
-    if (withdrawRes.ok()) {
-      expect(body.success).toBe(true);
-      expect(body.data.transferId).toBeTruthy();
-      expect(body.data.status).toBeTruthy();
-    } else {
-      // Stripe key not set — verify the error mentions configuration
-      expect(body.success).toBe(false);
-      expect(body.error).toBeDefined();
-    }
+    expect(withdrawRes.status()).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data.transferId).toBeTruthy();
+    expect(body.data.transferId).toMatch(/^tr_/);
+    expect(body.data.status).toBe('pending');
   });
 
   test('rejects withdrawal with insufficient balance', async ({ request }) => {

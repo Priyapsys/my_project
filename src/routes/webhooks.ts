@@ -7,11 +7,14 @@
 // ============================================================
 
 import { Router, Request, Response } from 'express';
+import { v4 as uuidv4 } from 'uuid';
 import {
   handleStripeWebhook,
   BankIntegrationError,
   getWithdrawalRecordByTransferId,
   updateWithdrawalStatus,
+  isWebhookProcessed,
+  recordProcessedWebhook,
 } from '../modules/bankIntegration';
 import { credit, debit } from '../modules/ledger';
 import { Currency } from '../utils/types';
@@ -34,11 +37,35 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
     switch (event.type) {
       case 'payment_intent.succeeded': {
-        const { userId, amount, currency } = event.data;
+        const { userId, amount, currency, paymentIntentId } = event.data;
         if (userId && amount && currency) {
-          // Credit the user's internal ledger after successful Stripe deposit
-          await credit(userId, currency as Currency, amount);
-          logger.info('Deposit credited to ledger', { userId, amount, currency });
+          const db = getDb();
+          await db.transaction(async (trx) => {
+            const sourceId = paymentIntentId || `pi_unknown_${userId}_${amount}`;
+            const alreadyProcessed = await isWebhookProcessed(sourceId, event.type, trx);
+            if (alreadyProcessed) {
+              logger.info('payment_intent.succeeded already processed, skipping credit (idempotent)', {
+                sourceId,
+                userId,
+              });
+              return;
+            }
+
+            // Credit the user's internal ledger after successful Stripe deposit
+            await credit(userId, currency as Currency, amount, trx);
+            await recordProcessedWebhook({
+              id: uuidv4(),
+              event_type: event.type,
+              source_id: sourceId,
+            }, trx);
+
+            logger.info('Deposit credited to ledger & recorded in processed_webhooks', {
+              userId,
+              amount,
+              currency,
+              paymentIntentId: sourceId,
+            });
+          });
         }
         break;
       }
@@ -48,6 +75,14 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
         if (transferId) {
           const db = getDb();
           await db.transaction(async (trx) => {
+            const alreadyProcessed = await isWebhookProcessed(transferId, event.type, trx);
+            if (alreadyProcessed) {
+              logger.info('transfer.paid already processed, skipping debit (idempotent)', {
+                transferId,
+              });
+              return;
+            }
+
             const record = await getWithdrawalRecordByTransferId(transferId, trx);
             if (record && record.status === 'pending') {
               const debitUser = userId || record.user_id;
@@ -58,6 +93,12 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
               await debit(debitUser, debitCurrency, debitAmount, trx, record.id);
               await updateWithdrawalStatus(record.id, 'completed', trx);
 
+              await recordProcessedWebhook({
+                id: uuidv4(),
+                event_type: event.type,
+                source_id: transferId,
+              }, trx);
+
               logger.info('Withdrawal transfer paid & ledger debited', {
                 userId: debitUser,
                 transferId,
@@ -65,6 +106,13 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
                 requestId: record.id,
               });
             } else {
+              // Record processed to ensure idempotency even if withdrawal was already completed/missing
+              await recordProcessedWebhook({
+                id: uuidv4(),
+                event_type: event.type,
+                source_id: transferId,
+              }, trx);
+
               logger.info('Withdrawal transfer.paid ignored (already processed or unknown)', {
                 transferId,
                 recordStatus: record?.status,

@@ -61,6 +61,21 @@ export async function createDepositIntent(
 
   try {
     const s = getStripe();
+
+    if (process.env.STRIPE_TEST_KEY === 'sk_test_mock') {
+      const paymentIntentId = `pi_mock_${Date.now()}`;
+      logger.info('Mock deposit PaymentIntent created', {
+        userId,
+        paymentIntentId,
+        amount,
+        currency,
+      });
+      return {
+        clientSecret: `${paymentIntentId}_secret_mock`,
+        paymentIntentId,
+      };
+    }
+
     const paymentIntent = await s.paymentIntents.create({
       amount: Math.round(amount * 100), // Stripe expects amount in smallest currency unit (cents)
       currency: currency.toLowerCase(),
@@ -111,6 +126,21 @@ export async function processWithdrawal(
 
   try {
     const s = getStripe();
+
+    if (process.env.STRIPE_TEST_KEY === 'sk_test_mock') {
+      const transferId = `tr_mock_${Date.now()}`;
+      logger.info('Mock withdrawal Transfer created', {
+        userId,
+        transferId,
+        amount,
+        destination: destinationAccountId,
+      });
+      return {
+        transferId,
+        status: 'pending',
+      };
+    }
+
     const transfer = await s.transfers.create({
       amount: Math.round(amount * 100), // cents
       currency: 'usd',
@@ -278,6 +308,44 @@ export async function getUserWithdrawalRecords(
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   }));
+}
+
+// ── Webhook Idempotency Store Helpers ───────────────────────
+
+export interface ProcessedWebhookRecord {
+  id: string;
+  event_type: string;
+  source_id: string;
+  processed_at?: Date;
+}
+
+export async function isWebhookProcessed(
+  sourceId: string,
+  eventType: string,
+  trx?: Knex.Transaction
+): Promise<boolean> {
+  const db = trx ?? getDb();
+  let query = db('processed_webhooks')
+    .where({ source_id: sourceId, event_type: eventType })
+    .first();
+  if (trx) {
+    query = query.forUpdate();
+  }
+  const row = await query;
+  return !!row;
+}
+
+export async function recordProcessedWebhook(
+  record: ProcessedWebhookRecord,
+  trx?: Knex.Transaction
+): Promise<void> {
+  const db = trx ?? getDb();
+  await db('processed_webhooks').insert({
+    id: record.id,
+    event_type: record.event_type,
+    source_id: record.source_id,
+    processed_at: record.processed_at || new Date(),
+  });
 }
 
 // ── Webhook Verification ────────────────────────────────────

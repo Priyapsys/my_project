@@ -86,6 +86,7 @@ describe('Bank Integration Module & Routes', () => {
       const db = getDb();
       await db('withdrawal_requests').del();
       await db('accounts').del();
+      await db('processed_webhooks').del();
     } catch (e) {}
   });
 
@@ -323,6 +324,61 @@ describe('Bank Integration Module & Routes', () => {
       expect(listRes.status).toBe(200);
       expect(listRes.body.data.length).toBe(1);
       expect(listRes.body.data[0].status).toBe('pending');
+    });
+
+    it('duplicate payment_intent.succeeded webhook does not double-credit ledger (idempotent)', async () => {
+      await setBalance('alice', 'USD', 50);
+
+      const webhookPayload = JSON.stringify({
+        type: 'payment_intent.succeeded',
+        data: {
+          object: {
+            id: 'pi_test_deposit_dup_99',
+            amount: 5000,
+            currency: 'usd',
+            metadata: { userId: 'alice' },
+          },
+        },
+      });
+
+      // Send webhook first time
+      const res1 = await request(app)
+        .post('/api/webhooks/stripe')
+        .set('stripe-signature', 'mock_sig')
+        .set('Content-Type', 'application/json')
+        .send(webhookPayload);
+
+      expect(res1.status).toBe(200);
+      expect(await getBalanceForCurrency('alice', 'USD')).toBe(100);
+
+      // Send webhook second time (duplicate retry from Stripe)
+      const res2 = await request(app)
+        .post('/api/webhooks/stripe')
+        .set('stripe-signature', 'mock_sig')
+        .set('Content-Type', 'application/json')
+        .send(webhookPayload);
+
+      expect(res2.status).toBe(200);
+      // Balance remains 100, not 150!
+      expect(await getBalanceForCurrency('alice', 'USD')).toBe(100);
+    });
+
+    it('POST /api/deposit?demo=true directly credits user ledger without Stripe SDK call', async () => {
+      await setBalance('alice', 'USD', 20);
+
+      const res = await request(app)
+        .post('/api/deposit?demo=true')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ amount: 150, currency: 'USD' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.demo).toBe(true);
+      expect(res.body.data.credited).toBe(true);
+      expect(res.body.data.amount).toBe(150);
+
+      expect(await getBalanceForCurrency('alice', 'USD')).toBe(170);
+      expect(mockPaymentIntentsCreate).not.toHaveBeenCalled();
     });
   });
 });

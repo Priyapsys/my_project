@@ -33,6 +33,8 @@ router.post('/reset', async (_req: Request, res: Response) => {
     await db('settlement_batches').del();
     await db('settlement_queue').del();
     await db('kyc_records').del();
+    await db('withdrawal_requests').del();
+    await db('processed_webhooks').del();
 
     await seedReserves({
       USD: 1_000_000,

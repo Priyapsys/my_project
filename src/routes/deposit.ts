@@ -5,12 +5,13 @@
 import { Router, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { createDepositIntent, BankIntegrationError } from '../modules/bankIntegration';
-import { AuthenticatedRequest } from '../utils/types';
+import { credit } from '../modules/ledger';
+import { AuthenticatedRequest, Currency } from '../utils/types';
 import { logger } from '../utils/logger';
 
 const router = Router();
 
-// POST /api/deposit — initiate a deposit via Stripe PaymentIntent
+// POST /api/deposit — initiate a deposit via Stripe PaymentIntent (or direct credit in demo mode)
 router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { amount, currency } = req.body || {};
@@ -32,6 +33,35 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         success: false,
         error: 'currency is required',
         code: 'VALIDATION',
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    // ── Demo Mode (Bypasses Stripe & directly credits ledger) ──
+    const isDemo = req.query.demo === 'true' || req.body?.demo === true || process.env.DEMO_MODE === 'true';
+    if (isDemo) {
+      const upperCur = currency.toUpperCase() as Currency;
+      await credit(userId, upperCur, amount);
+      const paymentIntentId = `pi_demo_${Date.now()}`;
+
+      logger.info('Demo deposit directly credited to ledger', {
+        userId,
+        amount,
+        currency: upperCur,
+        paymentIntentId,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          demo: true,
+          credited: true,
+          userId,
+          amount,
+          currency: upperCur,
+          paymentIntentId,
+        },
         timestamp: new Date().toISOString(),
       });
       return;
