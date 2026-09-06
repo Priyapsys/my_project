@@ -363,7 +363,8 @@ describe('Bank Integration Module & Routes', () => {
       expect(await getBalanceForCurrency('alice', 'USD')).toBe(100);
     });
 
-    it('POST /api/deposit?demo=true directly credits user ledger without Stripe SDK call', async () => {
+    it('POST /api/deposit?demo=true directly credits user ledger without Stripe SDK call in non-production', async () => {
+      process.env.NODE_ENV = 'test';
       await setBalance('alice', 'USD', 20);
 
       const res = await request(app)
@@ -379,6 +380,96 @@ describe('Bank Integration Module & Routes', () => {
 
       expect(await getBalanceForCurrency('alice', 'USD')).toBe(170);
       expect(mockPaymentIntentsCreate).not.toHaveBeenCalled();
+    });
+
+    it('POST /api/deposit with body demo: true credits ledger in non-production', async () => {
+      process.env.NODE_ENV = 'development';
+      await setBalance('alice', 'USD', 50);
+
+      const res = await request(app)
+        .post('/api/deposit')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ amount: 100, currency: 'USD', demo: true });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.demo).toBe(true);
+      expect(await getBalanceForCurrency('alice', 'USD')).toBe(150);
+      expect(mockPaymentIntentsCreate).not.toHaveBeenCalled();
+    });
+
+    it('POST /api/deposit with DEMO_MODE=true env var credits ledger when NODE_ENV is unset', async () => {
+      delete process.env.NODE_ENV;
+      process.env.DEMO_MODE = 'true';
+      await setBalance('alice', 'USD', 10);
+
+      const res = await request(app)
+        .post('/api/deposit')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ amount: 40, currency: 'USD' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.demo).toBe(true);
+      expect(await getBalanceForCurrency('alice', 'USD')).toBe(50);
+      delete process.env.DEMO_MODE;
+    });
+
+    it('HARD GUARD: rejects ?demo=true with 403 DEMO_MODE_DISABLED when NODE_ENV is production and does NOT credit ledger', async () => {
+      process.env.NODE_ENV = 'production';
+      await setBalance('alice', 'USD', 100);
+
+      const res = await request(app)
+        .post('/api/deposit?demo=true')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ amount: 500, currency: 'USD' });
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.code).toBe('DEMO_MODE_DISABLED');
+      expect(res.body.error).toBe('Demo mode is disabled in production');
+
+      // Balance MUST NOT be credited
+      expect(await getBalanceForCurrency('alice', 'USD')).toBe(100);
+      expect(mockPaymentIntentsCreate).not.toHaveBeenCalled();
+    });
+
+    it('HARD GUARD: rejects body { demo: true } with 403 DEMO_MODE_DISABLED when NODE_ENV is production', async () => {
+      process.env.NODE_ENV = 'production';
+      await setBalance('alice', 'USD', 200);
+
+      const res = await request(app)
+        .post('/api/deposit')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ amount: 1000, currency: 'USD', demo: true });
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.code).toBe('DEMO_MODE_DISABLED');
+
+      // Balance MUST NOT be credited
+      expect(await getBalanceForCurrency('alice', 'USD')).toBe(200);
+      expect(mockPaymentIntentsCreate).not.toHaveBeenCalled();
+    });
+
+    it('HARD GUARD: rejects DEMO_MODE=true env var with 403 DEMO_MODE_DISABLED when NODE_ENV is production', async () => {
+      process.env.NODE_ENV = 'production';
+      process.env.DEMO_MODE = 'true';
+      await setBalance('alice', 'USD', 300);
+
+      const res = await request(app)
+        .post('/api/deposit')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ amount: 2000, currency: 'USD' });
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.code).toBe('DEMO_MODE_DISABLED');
+
+      // Balance MUST NOT be credited
+      expect(await getBalanceForCurrency('alice', 'USD')).toBe(300);
+      expect(mockPaymentIntentsCreate).not.toHaveBeenCalled();
+      delete process.env.DEMO_MODE;
     });
   });
 });

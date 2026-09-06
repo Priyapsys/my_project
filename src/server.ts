@@ -183,6 +183,13 @@ async function start(): Promise<void> {
       logger.success(`Server running on http://localhost:${PORT}`);
       logger.info(`API index: http://localhost:${PORT}/api`);
       logger.info(`Health check: http://localhost:${PORT}/health`);
+      if (process.env.NODE_ENV === 'production') {
+        logger.info('Demo mode: DISABLED (NODE_ENV=production)');
+      } else {
+        logger.warn(
+          `Demo mode: ENABLED (NODE_ENV=${process.env.NODE_ENV || 'development'}) — deposit bypass reachable via ?demo=true`
+        );
+      }
     });
   } catch (err) {
     logger.error('Failed to start server', {

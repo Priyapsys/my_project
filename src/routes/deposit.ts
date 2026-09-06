@@ -38,9 +38,26 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
       return;
     }
 
-    // ── Demo Mode (Bypasses Stripe & directly credits ledger) ──
-    const isDemo = req.query.demo === 'true' || req.body?.demo === true || process.env.DEMO_MODE === 'true';
-    if (isDemo) {
+    // ── Demo Mode Guard (Bypasses Stripe & directly credits ledger in non-production) ──
+    const isDemoRequested =
+      req.query.demo === 'true' || req.body?.demo === true ||
+      process.env.DEMO_MODE === 'true';
+
+    if (isDemoRequested) {
+      if (process.env.NODE_ENV === 'production') {
+        logger.warn('Demo deposit blocked: demo mode is disabled in production', {
+          userId,
+          ip: req.ip,
+        });
+        res.status(403).json({
+          success: false,
+          error: 'Demo mode is disabled in production',
+          code: 'DEMO_MODE_DISABLED',
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
       const upperCur = currency.toUpperCase() as Currency;
       await credit(userId, upperCur, amount);
       const paymentIntentId = `pi_demo_${Date.now()}`;

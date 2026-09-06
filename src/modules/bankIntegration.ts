@@ -62,7 +62,7 @@ export async function createDepositIntent(
   try {
     const s = getStripe();
 
-    if (process.env.STRIPE_TEST_KEY === 'sk_test_mock') {
+    if (process.env.STRIPE_TEST_KEY === 'sk_test_mock' && process.env.NODE_ENV !== 'production') {
       const paymentIntentId = `pi_mock_${Date.now()}`;
       logger.info('Mock deposit PaymentIntent created', {
         userId,
