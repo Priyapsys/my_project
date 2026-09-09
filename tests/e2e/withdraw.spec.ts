@@ -15,7 +15,7 @@ test.describe('Withdraw Workflow', () => {
 
     // Obtain JWT
     const loginRes = await request.post('http://localhost:3000/api/login', {
-      data: { userId },
+      data: { userId, password: process.env.SEED_USER_PASSWORD ?? 'DemoPassword123!' },
     });
     const { token } = (await loginRes.json()).data;
 
@@ -43,7 +43,7 @@ test.describe('Withdraw Workflow', () => {
     });
 
     const loginRes = await request.post('http://localhost:3000/api/login', {
-      data: { userId },
+      data: { userId, password: process.env.SEED_USER_PASSWORD ?? 'DemoPassword123!' },
     });
     const { token } = (await loginRes.json()).data;
 
@@ -66,7 +66,7 @@ test.describe('Withdraw Workflow', () => {
     });
 
     const loginRes = await request.post('http://localhost:3000/api/login', {
-      data: { userId },
+      data: { userId, password: process.env.SEED_USER_PASSWORD ?? 'DemoPassword123!' },
     });
     const { token } = (await loginRes.json()).data;
 
