@@ -22,7 +22,7 @@ test.describe('Blockchain Settlement Engine Flow', () => {
 
     // Obtain sender JWT token for API calls
     const loginRes = await request.post('http://localhost:3000/api/login', {
-      data: { userId: sender },
+      data: { userId: sender, password: process.env.SEED_USER_PASSWORD ?? 'DemoPassword123!' },
     });
     const { token } = (await loginRes.json()).data;
 
