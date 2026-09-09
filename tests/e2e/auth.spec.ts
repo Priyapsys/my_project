@@ -7,12 +7,15 @@ test.describe('Authentication & Onboarding Flow', () => {
 
   test('completes full signup, KYC, logout, login, and session validation flow', async ({ page }) => {
     const newUserId = `user_${Date.now()}`;
+    const password = 'SignupPassword123!';
 
     // 1. Visit App & Sign up / Log in as new user
     await page.goto('/');
     await expect(page.getByTestId('login-user-id-input')).toBeVisible();
 
+    await page.getByTestId('auth-mode-toggle').click();
     await page.getByTestId('login-user-id-input').fill(newUserId);
+    await page.getByTestId('login-password-input').fill(password);
     await page.getByTestId('login-submit-button').click();
 
     // 2. Progressive KYC Verification
@@ -42,6 +45,7 @@ test.describe('Authentication & Onboarding Flow', () => {
 
     // 4. Log back in (should skip KYC since user is now VERIFIED)
     await page.getByTestId('login-user-id-input').fill(newUserId);
+    await page.getByTestId('login-password-input').fill(password);
     await page.getByTestId('login-submit-button').click();
 
     await expect(page.getByTestId('dashboard-layout')).toBeVisible();
