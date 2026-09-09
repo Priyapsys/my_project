@@ -158,6 +158,17 @@ router.get('/:id', authMiddleware, async (req: AuthenticatedRequest, res: Respon
       return;
     }
 
+    if (record.user_id !== userId) {
+      // Return 404 rather than 403 to avoid exposing whether another user's ID exists.
+      res.status(404).json({
+        success: false,
+        error: 'Withdrawal request not found',
+        code: 'NOT_FOUND',
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
     res.status(200).json({
       success: true,
       data: record,
