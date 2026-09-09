@@ -4,6 +4,7 @@
 
 import { Router, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
+import { adminMiddleware } from '../middleware/admin';
 import { idempotencyMiddleware } from '../middleware/idempotency';
 import { transferRateLimiter } from '../middleware/rateLimit';
 import { runSettlement } from '../services/settlementService';
@@ -16,7 +17,7 @@ import { logger } from '../utils/logger';
 const router = Router();
 
 // POST /api/settlement/run — trigger batch settlement
-router.post('/run', authMiddleware, transferRateLimiter, idempotencyMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.post('/run', authMiddleware, adminMiddleware, transferRateLimiter, idempotencyMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const result = await runSettlement();
 
@@ -66,7 +67,7 @@ router.get('/status', authMiddleware, async (req: AuthenticatedRequest, res: Res
 });
 
 // GET /api/settlement/history — all blockchain records
-router.get('/history', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/history', authMiddleware, adminMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const records = await getAllRecords();
 
   res.status(200).json({
@@ -123,7 +124,7 @@ router.get('/:batchId/verify', authMiddleware, async (req: AuthenticatedRequest,
 });
 
 // POST /api/settlement/reconcile — reconcile pending batches
-router.post('/reconcile', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.post('/reconcile', authMiddleware, adminMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { reconcilePendingBatches } = await import('../services/blockchainService');
     const result = await reconcilePendingBatches();
