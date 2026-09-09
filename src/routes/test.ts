@@ -7,6 +7,7 @@ import { getDb } from '../db/connection';
 import { setBalance } from '../modules/ledger';
 import { seedReserves } from '../modules/treasury';
 import { seedKycVerified } from '../modules/kyc';
+import { ensureUser } from '../modules/users';
 
 const router = Router();
 
@@ -62,6 +63,8 @@ router.post('/seed-user', async (req: Request, res: Response) => {
       res.status(400).json({ success: false, error: 'userId is required' });
       return;
     }
+
+    await ensureUser(userId, process.env.TEST_USER_PASSWORD ?? 'TestPassword123!', 'user');
 
     if (kycVerified) {
       await seedKycVerified([userId]);
