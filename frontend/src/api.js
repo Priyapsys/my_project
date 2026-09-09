@@ -42,8 +42,10 @@ async function request(method, path, body, token) {
 }
 
 export const api = {
-  login: (userId) =>
-    request('POST', '/login', { userId }),
+  signup: (userId, password) =>
+    request('POST', '/signup', { userId, password }),
+  login: (userId, password) =>
+    request('POST', '/login', { userId, password }),
 
   // ── KYC —————————————————————————————————————————————————
   /** Step 1: Submit government ID */
