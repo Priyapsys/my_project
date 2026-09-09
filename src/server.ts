@@ -135,7 +135,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ── Request Logger ───────────────────────────────────────────
-app.use((req: Request, _res: Response, next: NextFunction) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   logger.info(`→ ${req.method} ${req.path}`, { correlationId: res.locals.correlationId });
   next();
 });
