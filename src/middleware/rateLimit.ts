@@ -23,3 +23,20 @@ export const transferRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+
+// Login is unauthenticated, so rate-limit by client IP to slow brute-force attempts.
+export const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({
+      success: false,
+      error: 'Too many login attempts, please try again later.',
+      code: 'LOGIN_RATE_LIMITED',
+      timestamp: new Date().toISOString(),
+    });
+  },
+});
