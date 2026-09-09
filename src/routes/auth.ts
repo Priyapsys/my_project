@@ -6,10 +6,11 @@ import { Router, Request, Response } from 'express';
 import { issueToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { getKycRecord, setKycStatus } from '../middleware/kyc';
+import { loginRateLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
-router.post('/', async (req: Request, res: Response): Promise<void> => {
+router.post('/', loginRateLimiter, async (req: Request, res: Response): Promise<void> => {
   const { userId } = req.body;
 
   if (!userId || typeof userId !== 'string' || userId.trim() === '') {
