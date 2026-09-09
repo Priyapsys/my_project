@@ -25,6 +25,7 @@ import webhookRoute    from './routes/webhooks';
 import { seedBalances }    from './modules/ledger';
 import { seedReserves }    from './modules/treasury';
 import { seedKyc }         from './middleware/kyc';
+import { ensureUser }      from './modules/users';
 
 // ============================================================
 //  SEED DATA — Initial state for demo
@@ -36,9 +37,10 @@ async function seed(): Promise<void> {
   // Users
   const USERS = ['alice', 'bob', 'charlie', 'diana', 'eve'];
 
-  // JWT auth is stateless — no pre-issued tokens needed.
-  // Seed users must POST /api/login { "userId": "alice" } to get a JWT.
-  logger.info(`Seed users: ${USERS.join(', ')} — login via POST /api/login`);
+  const seedPassword = process.env.SEED_USER_PASSWORD ?? (process.env.NODE_ENV === 'production' ? '' : 'DemoPassword123!');
+  if (!seedPassword) throw new Error('SEED_USER_PASSWORD is required in production');
+  await Promise.all(USERS.map((userId) => ensureUser(userId, seedPassword, userId === 'alice' ? 'admin' : 'user')));
+  logger.info(`Seed users: ${USERS.join(', ')} — login via POST /api/login with SEED_USER_PASSWORD`);
 
   // KYC — all seed users are pre-verified
   await seedKyc(USERS);
@@ -141,7 +143,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // ── Routes ───────────────────────────────────────────────────
-app.use('/api/login',       authRoute);
+app.use('/api',              authRoute);
 app.use('/api/kyc',         kycRoute);
 app.use('/api/transfer',    transferRoute);
 app.use('/api/settlement',  settlementRoute);
@@ -168,7 +170,7 @@ app.get('/api', (_req: Request, res: Response) => {
     service: 'Real-Time Global Payment System with Blockchain Settlement',
     version: '1.1.0',
     endpoints: {
-      auth:        'POST /api/login',
+      auth:        'POST /api/login | POST /api/signup',
       kyc:         'POST /api/kyc/submit | POST /api/kyc/address | POST /api/kyc/face | GET /api/kyc/status',
       transfer:    'POST /api/transfer  (requires Idempotency-Key header)',
       deposit:     'POST /api/deposit',
