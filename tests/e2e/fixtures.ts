@@ -29,8 +29,12 @@ export const test = base.extend<CustomFixtures>({
       });
 
       // 2. Obtain real JWT from backend login endpoint
+      const seedUsers = ['alice', 'bob', 'charlie', 'diana', 'eve'];
+      const password = seedUsers.includes(userId)
+        ? (process.env.SEED_USER_PASSWORD ?? 'DemoPassword123!')
+        : (process.env.TEST_USER_PASSWORD ?? 'TestPassword123!');
       const response = await request.post('http://localhost:3000/api/login', {
-        data: { userId },
+        data: { userId, password },
       });
       const data = await response.json();
       if (!data.success) {
