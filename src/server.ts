@@ -3,6 +3,7 @@
 // ============================================================
 
 import express, { Request, Response, NextFunction } from 'express';
+import { randomUUID } from 'crypto';
 import { logger } from './utils/logger';
 
 // ── Database ────────────────────────────────────────────────
@@ -75,6 +76,56 @@ async function seed(): Promise<void> {
 
 const app = express();
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
+const configuredOrigins = (process.env.CORS_ORIGINS ?? (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5173'))
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.disable('x-powered-by');
+
+// ── Request identity + security headers + CORS ───────────────
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const supplied = req.headers['x-correlation-id'];
+  const correlationId = typeof supplied === 'string' && /^[A-Za-z0-9._:-]{1,100}$/.test(supplied)
+    ? supplied
+    : randomUUID();
+
+  res.locals.correlationId = correlationId;
+  res.setHeader('X-Correlation-Id', correlationId);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+
+  const origin = req.headers.origin;
+  if (origin) {
+    if (!configuredOrigins.includes(origin)) {
+      res.status(403).json({
+        success: false,
+        error: 'Origin is not allowed',
+        code: 'CORS_ORIGIN_NOT_ALLOWED',
+        correlationId,
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Vary', 'Origin');
+  }
+
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Idempotency-Key, Stripe-Signature, X-Correlation-Id');
+    res.status(204).end();
+    return;
+  }
+
+  next();
+});
 
 // ── Stripe Webhook (raw body — MUST be before express.json()) ─
 app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }), webhookRoute);
@@ -85,7 +136,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // ── Request Logger ───────────────────────────────────────────
 app.use((req: Request, _res: Response, next: NextFunction) => {
-  logger.info(`→ ${req.method} ${req.path}`);
+  logger.info(`→ ${req.method} ${req.path}`, { correlationId: res.locals.correlationId });
   next();
 });
 
@@ -138,17 +189,19 @@ app.use((_req: Request, res: Response) => {
     success: false,
     error: 'Endpoint not found',
     code: 'NOT_FOUND',
+    correlationId: res.locals.correlationId,
     timestamp: new Date().toISOString(),
   });
 });
 
 // ── Global Error Handler ─────────────────────────────────────
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  logger.error('Unhandled error', { message: err.message, stack: err.stack });
+  logger.error('Unhandled error', { message: err.message, stack: err.stack, correlationId: res.locals.correlationId });
   res.status(500).json({
     success: false,
     error: 'Internal server error',
     code: 'INTERNAL_ERROR',
+    correlationId: res.locals.correlationId,
     timestamp: new Date().toISOString(),
   });
 });
