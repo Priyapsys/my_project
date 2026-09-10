@@ -41,7 +41,7 @@ export async function verifyPassword(password: string, encodedHash: string): Pro
 }
 
 export async function getUser(userId: string): Promise<UserRecord | undefined> {
-  return await getDb<UserRecord>('users').where({ user_id: userId }).first();
+  return await getDb()('users').where({ user_id: userId }).first() as UserRecord | undefined;
 }
 
 export async function createUser(userId: string, password: string, role: UserRole = 'user'): Promise<void> {
