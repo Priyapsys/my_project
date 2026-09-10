@@ -49,3 +49,10 @@ npm run test:flow
 
 ## ⚖️ License
 MIT
+
+### Authentication
+
+- `POST /api/signup` with `{ userId, password }` creates a user with a scrypt password hash and starts KYC in `PENDING`.
+- `POST /api/login` requires the same credentials and returns a signed JWT with the configured expiry (default: 1 hour).
+- Development demo users are seeded only when `NODE_ENV` `production` is not set. Their password is `SEED_USER_PASSWORD` (development fallback: `DemoPassword123!`).
+- Settlement `run`, `history`, and `reconcile` endpoints require the database role `admin`.
