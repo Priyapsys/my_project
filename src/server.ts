@@ -34,6 +34,11 @@ import { ensureUser }      from './modules/users';
 async function seed(): Promise<void> {
   logger.banner('Seeding Initial System State');
 
+  if (process.env.NODE_ENV === 'production') {
+    logger.info('Production mode: demo users, balances, KYC, and reserves are not seeded');
+    return;
+  }
+
   // Users
   const USERS = ['alice', 'bob', 'charlie', 'diana', 'eve'];
 
