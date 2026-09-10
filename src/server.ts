@@ -42,8 +42,7 @@ async function seed(): Promise<void> {
   // Users
   const USERS = ['alice', 'bob', 'charlie', 'diana', 'eve'];
 
-  const seedPassword = process.env.SEED_USER_PASSWORD ?? (process.env.NODE_ENV === 'production' ? '' : 'DemoPassword123!');
-  if (!seedPassword) throw new Error('SEED_USER_PASSWORD is required in production');
+  const seedPassword = process.env.SEED_USER_PASSWORD ?? 'DemoPassword123!';
   await Promise.all(USERS.map((userId) => ensureUser(userId, seedPassword, userId === 'alice' ? 'admin' : 'user')));
   logger.info(`Seed users: ${USERS.join(', ')} — login via POST /api/login with SEED_USER_PASSWORD`);
 
