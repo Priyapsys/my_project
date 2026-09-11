@@ -4,6 +4,8 @@
 
 import { Router, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
+import { validateBody } from '../middleware/validation';
+import { depositSchema } from '../schemas';
 import { createDepositIntent, BankIntegrationError } from '../modules/bankIntegration';
 import { credit } from '../modules/ledger';
 import { AuthenticatedRequest, Currency } from '../utils/types';
@@ -12,103 +14,87 @@ import { logger } from '../utils/logger';
 const router = Router();
 
 // POST /api/deposit — initiate a deposit via Stripe PaymentIntent (or direct credit in demo mode)
-router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const { amount, currency } = req.body || {};
-    const userId = req.userId!;
+router.post(
+  '/',
+  authMiddleware,
+  validateBody(depositSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const { amount, currency } = req.body;
+      const userId = req.userId!;
 
-    // ── Validation ────────────────────────────────────────────
-    if (!amount || typeof amount !== 'number' || amount <= 0) {
-      res.status(400).json({
-        success: false,
-        error: 'amount is required and must be a positive number',
-        code: 'VALIDATION',
-        timestamp: new Date().toISOString(),
-      });
-      return;
-    }
+      // ── Demo Mode Guard (Bypasses Stripe & directly credits ledger in non-production) ──
+      const isDemoRequested =
+        req.query.demo === 'true' || req.body?.demo === true ||
+        process.env.DEMO_MODE === 'true';
 
-    if (!currency || typeof currency !== 'string') {
-      res.status(400).json({
-        success: false,
-        error: 'currency is required',
-        code: 'VALIDATION',
-        timestamp: new Date().toISOString(),
-      });
-      return;
-    }
+      if (isDemoRequested) {
+        if (process.env.NODE_ENV === 'production') {
+          logger.warn('Demo deposit blocked: demo mode is disabled in production', {
+            userId,
+            ip: req.ip,
+          });
+          res.status(403).json({
+            success: false,
+            error: 'Demo mode is disabled in production',
+            code: 'DEMO_MODE_DISABLED',
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
 
-    // ── Demo Mode Guard (Bypasses Stripe & directly credits ledger in non-production) ──
-    const isDemoRequested =
-      req.query.demo === 'true' || req.body?.demo === true ||
-      process.env.DEMO_MODE === 'true';
+        const upperCur = currency.toUpperCase() as Currency;
+        await credit(userId, upperCur, amount);
+        const paymentIntentId = `pi_demo_${Date.now()}`;
 
-    if (isDemoRequested) {
-      if (process.env.NODE_ENV === 'production') {
-        logger.warn('Demo deposit blocked: demo mode is disabled in production', {
+        logger.info('Demo deposit directly credited to ledger', {
           userId,
-          ip: req.ip,
+          amount,
+          currency: upperCur,
+          paymentIntentId,
         });
-        res.status(403).json({
-          success: false,
-          error: 'Demo mode is disabled in production',
-          code: 'DEMO_MODE_DISABLED',
+
+        res.status(200).json({
+          success: true,
+          data: {
+            demo: true,
+            credited: true,
+            userId,
+            amount,
+            currency: upperCur,
+            paymentIntentId,
+          },
           timestamp: new Date().toISOString(),
         });
         return;
       }
 
-      const upperCur = currency.toUpperCase() as Currency;
-      await credit(userId, upperCur, amount);
-      const paymentIntentId = `pi_demo_${Date.now()}`;
+      // ── Create PaymentIntent ──────────────────────────────────
+      const result = await createDepositIntent(userId, amount, currency);
 
-      logger.info('Demo deposit directly credited to ledger', {
-        userId,
-        amount,
-        currency: upperCur,
-        paymentIntentId,
-      });
+      logger.info('Deposit intent created', { userId, amount, currency, paymentIntentId: result.paymentIntentId });
 
       res.status(200).json({
         success: true,
         data: {
-          demo: true,
-          credited: true,
-          userId,
-          amount,
-          currency: upperCur,
-          paymentIntentId,
+          clientSecret: result.clientSecret,
+          paymentIntentId: result.paymentIntentId,
         },
         timestamp: new Date().toISOString(),
       });
-      return;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Deposit failed';
+      const code = err instanceof BankIntegrationError ? err.code : 'DEPOSIT_ERROR';
+      logger.error('Deposit failed', { error: message, userId: req.userId });
+
+      res.status(500).json({
+        success: false,
+        error: message,
+        code,
+        timestamp: new Date().toISOString(),
+      });
     }
-
-    // ── Create PaymentIntent ──────────────────────────────────
-    const result = await createDepositIntent(userId, amount, currency);
-
-    logger.info('Deposit intent created', { userId, amount, currency, paymentIntentId: result.paymentIntentId });
-
-    res.status(200).json({
-      success: true,
-      data: {
-        clientSecret: result.clientSecret,
-        paymentIntentId: result.paymentIntentId,
-      },
-      timestamp: new Date().toISOString(),
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Deposit failed';
-    const code = err instanceof BankIntegrationError ? err.code : 'DEPOSIT_ERROR';
-    logger.error('Deposit failed', { error: message, userId: req.userId });
-
-    res.status(500).json({
-      success: false,
-      error: message,
-      code,
-      timestamp: new Date().toISOString(),
-    });
   }
-});
+);
 
 export default router;

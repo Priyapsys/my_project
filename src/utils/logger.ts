@@ -2,6 +2,14 @@
 //  LOGGER — Structured Timestamped Console Logger
 // ============================================================
 
+import { AsyncLocalStorage } from 'async_hooks';
+
+export interface RequestStore {
+  requestId?: string;
+}
+
+export const requestContext = new AsyncLocalStorage<RequestStore>();
+
 export type LogLevel = 'INFO' | 'SUCCESS' | 'WARN' | 'ERROR' | 'DEBUG' | 'CHAIN' | 'SETTLE' | 'TX';
 
 const LEVEL_COLORS: Record<LogLevel, string> = {
@@ -39,12 +47,24 @@ function formatValue(value: unknown): string {
 
 export const logger = {
   log(level: LogLevel, message: string, data?: unknown): void {
+    const store = requestContext.getStore();
+    const requestId = store?.requestId;
     const color = LEVEL_COLORS[level] ?? '';
     const ts = `\x1b[90m${now()}\x1b[0m`;
-    const tag = `${color}${BOLD}[${pad(level)}]${RESET}`;
+    const reqTag = requestId ? ` \x1b[35m[${requestId}]\x1b[0m` : '';
+    const tag = `${color}${BOLD}[${pad(level)}]${RESET}${reqTag}`;
     const msg = `${color}${message}${RESET}`;
-    const extra = data !== undefined ? formatValue(data) : '';
+
+    let logData = data;
+    if (requestId && typeof data === 'object' && data !== null && !Array.isArray(data) && !('requestId' in data)) {
+      logData = { requestId, ...data };
+    }
+    const extra = logData !== undefined ? formatValue(logData) : '';
     console.log(`${ts} ${tag} ${msg}${extra}`);
+  },
+
+  getRequestId(): string | undefined {
+    return requestContext.getStore()?.requestId;
   },
 
   info(message: string, data?: unknown): void {

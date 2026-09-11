@@ -9,6 +9,12 @@ import { logger } from './utils/logger';
 // ── Database ────────────────────────────────────────────────
 import { initDatabase, closeDatabase } from './db/connection';
 
+// ── Security & Gateway Middleware ───────────────────────────
+import helmet from 'helmet';
+import { corsMiddleware } from './middleware/cors';
+import { correlationIdMiddleware } from './middleware/correlationId';
+import { globalRateLimiter } from './middleware/rateLimit';
+
 // ── Routes ──────────────────────────────────────────────────
 import authRoute       from './routes/auth';
 import kycRoute        from './routes/kyc';
@@ -82,56 +88,15 @@ async function seed(): Promise<void> {
 
 const app = express();
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
-const configuredOrigins = (process.env.CORS_ORIGINS ?? (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5173'))
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
 
-app.disable('x-powered-by');
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', true);
+}
 
-// ── Request identity + security headers + CORS ───────────────
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const supplied = req.headers['x-correlation-id'];
-  const correlationId = typeof supplied === 'string' && /^[A-Za-z0-9._:-]{1,100}$/.test(supplied)
-    ? supplied
-    : randomUUID();
-
-  res.locals.correlationId = correlationId;
-  res.setHeader('X-Correlation-Id', correlationId);
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Referrer-Policy', 'no-referrer');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  if (process.env.NODE_ENV === 'production') {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  }
-
-  const origin = req.headers.origin;
-  if (origin) {
-    if (!configuredOrigins.includes(origin)) {
-      res.status(403).json({
-        success: false,
-        error: 'Origin is not allowed',
-        code: 'CORS_ORIGIN_NOT_ALLOWED',
-        correlationId,
-        timestamp: new Date().toISOString(),
-      });
-      return;
-    }
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Vary', 'Origin');
-  }
-
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Idempotency-Key, Stripe-Signature, X-Correlation-Id');
-    res.status(204).end();
-    return;
-  }
-
-  next();
-});
+// ── Security & Tracing Middleware ────────────────────────────
+app.use(helmet());
+app.use(corsMiddleware);
+app.use(correlationIdMiddleware);
 
 // ── Stripe Webhook (raw body — MUST be before express.json()) ─
 app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }), webhookRoute);
@@ -140,6 +105,9 @@ app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }), webho
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ── Global Baseline Rate Limiter ─────────────────────────────
+app.use(globalRateLimiter);
+
 // ── Request Logger ───────────────────────────────────────────
 app.use((req: Request, res: Response, next: NextFunction) => {
   logger.info(`→ ${req.method} ${req.path}`, { correlationId: res.locals.correlationId });
@@ -147,7 +115,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // ── Routes ───────────────────────────────────────────────────
-app.use('/api',              authRoute);
+app.use('/api/auth',        authRoute);
+app.use('/api/login',       authRoute);
+app.use('/api/signup',      authRoute);
 app.use('/api/kyc',         kycRoute);
 app.use('/api/transfer',    transferRoute);
 app.use('/api/settlement',  settlementRoute);
@@ -174,7 +144,7 @@ app.get('/api', (_req: Request, res: Response) => {
     service: 'Real-Time Global Payment System with Blockchain Settlement',
     version: '1.1.0',
     endpoints: {
-      auth:        'POST /api/login | POST /api/signup',
+      auth:        'POST /api/login | POST /api/auth/login | POST /api/auth/signup | POST /api/signup',
       kyc:         'POST /api/kyc/submit | POST /api/kyc/address | POST /api/kyc/face | GET /api/kyc/status',
       transfer:    'POST /api/transfer  (requires Idempotency-Key header)',
       deposit:     'POST /api/deposit',
@@ -202,6 +172,16 @@ app.use((_req: Request, res: Response) => {
 
 // ── Global Error Handler ─────────────────────────────────────
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (err.message === 'Not allowed by CORS') {
+    res.status(403).json({
+      success: false,
+      error: 'Not allowed by CORS',
+      code: 'CORS_ERROR',
+      timestamp: new Date().toISOString(),
+    });
+    return;
+  }
+
   logger.error('Unhandled error', { message: err.message, stack: err.stack, correlationId: res.locals.correlationId });
   res.status(500).json({
     success: false,

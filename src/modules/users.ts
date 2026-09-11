@@ -2,11 +2,23 @@
 //  USERS — Persisted credentials and roles
 // ============================================================
 
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'crypto';
-import { promisify } from 'util';
+import { randomBytes, scrypt as scryptCallback, timingSafeEqual, ScryptOptions } from 'crypto';
 import { getDb } from '../db/connection';
 
-const scrypt = promisify(scryptCallback);
+function scryptAsync(
+  password: string | Buffer,
+  salt: string | Buffer,
+  keylen: number,
+  options: ScryptOptions
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    scryptCallback(password, salt, keylen, options, (err, derivedKey) => {
+      if (err) reject(err);
+      else resolve(derivedKey);
+    });
+  });
+}
+
 const KEY_LENGTH = 64;
 const SCRYPT_N = 16384;
 const SCRYPT_R = 8;
@@ -24,7 +36,7 @@ export interface UserRecord {
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
-  const derivedKey = (await scrypt(password, salt, KEY_LENGTH, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P })) as Buffer;
+  const derivedKey = await scryptAsync(password, salt, KEY_LENGTH, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P });
   return ['scrypt', SCRYPT_N, SCRYPT_R, SCRYPT_P, salt.toString('base64'), derivedKey.toString('base64')].join('$');
 }
 
@@ -33,7 +45,7 @@ export async function verifyPassword(password: string, encodedHash: string): Pro
     const [algorithm, n, r, p, saltText, keyText] = encodedHash.split('$');
     if (algorithm !== 'scrypt' || !n || !r || !p || !saltText || !keyText) return false;
     const expected = Buffer.from(keyText, 'base64');
-    const actual = (await scrypt(password, Buffer.from(saltText, 'base64'), expected.length, { N: Number(n), r: Number(r), p: Number(p) })) as Buffer;
+    const actual = await scryptAsync(password, Buffer.from(saltText, 'base64'), expected.length, { N: Number(n), r: Number(r), p: Number(p) });
     return expected.length === actual.length && timingSafeEqual(expected, actual);
   } catch {
     return false;
@@ -45,9 +57,9 @@ export async function getUser(userId: string): Promise<UserRecord | undefined> {
 }
 
 export async function createUser(userId: string, password: string, role: UserRole = 'user'): Promise<void> {
-  await getDb('users').insert({ user_id: userId, password_hash: await hashPassword(password), role });
+  await getDb()('users').insert({ user_id: userId, password_hash: await hashPassword(password), role });
 }
 
 export async function ensureUser(userId: string, password: string, role: UserRole = 'user'): Promise<void> {
-  await getDb('users').insert({ user_id: userId, password_hash: await hashPassword(password), role }).onConflict('user_id').ignore();
+  await getDb()('users').insert({ user_id: userId, password_hash: await hashPassword(password), role }).onConflict('user_id').ignore();
 }

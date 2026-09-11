@@ -5,6 +5,8 @@
 import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { authMiddleware } from '../middleware/auth';
+import { validateBody } from '../middleware/validation';
+import { withdrawSchema } from '../schemas';
 import {
   processWithdrawal,
   BankIntegrationError,
@@ -23,32 +25,15 @@ import { getDb } from '../db/connection';
 const router = Router();
 
 // POST /api/withdraw — Place hold on internal ledger balance then create Stripe Transfer
-router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  let requestId: string | null = null;
-  try {
-    const { amount, destinationAccountId } = req.body || {};
-    const userId = req.userId!;
-
-    // ── Validation ────────────────────────────────────────────
-    if (!amount || typeof amount !== 'number' || amount <= 0) {
-      res.status(400).json({
-        success: false,
-        error: 'amount is required and must be a positive number',
-        code: 'VALIDATION',
-        timestamp: new Date().toISOString(),
-      });
-      return;
-    }
-
-    if (!destinationAccountId || typeof destinationAccountId !== 'string') {
-      res.status(400).json({
-        success: false,
-        error: 'destinationAccountId is required',
-        code: 'VALIDATION',
-        timestamp: new Date().toISOString(),
-      });
-      return;
-    }
+router.post(
+  '/',
+  authMiddleware,
+  validateBody(withdrawSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    let requestId: string | null = null;
+    try {
+      const { amount, destinationAccountId } = req.body;
+      const userId = req.userId!;
 
     // ── Hold Approach (Reserved-Balance Mechanism) ───────────
     // WE CHOSE THE HOLD APPROACH: Rather than debiting user ledger immediately,
@@ -146,6 +131,7 @@ router.get('/', authMiddleware, async (req: AuthenticatedRequest, res: Response)
 router.get('/:id', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const userId = req.userId;
     const record = await getWithdrawalRecordById(id);
 
     if (!record) {

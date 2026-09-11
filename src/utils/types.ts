@@ -14,8 +14,17 @@ export type CurrencyBalances = Partial<Record<Currency, number>>;
 // ----------------------------
 //  Auth
 // ----------------------------
+declare global {
+  namespace Express {
+    interface Request {
+      requestId?: string;
+    }
+  }
+}
+
 export interface AuthenticatedRequest extends Request {
   userId?: string;
+  requestId?: string;
 }
 
 // ----------------------------

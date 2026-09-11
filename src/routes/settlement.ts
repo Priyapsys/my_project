@@ -7,6 +7,8 @@ import { authMiddleware } from '../middleware/auth';
 import { adminMiddleware } from '../middleware/admin';
 import { idempotencyMiddleware } from '../middleware/idempotency';
 import { transferRateLimiter } from '../middleware/rateLimit';
+import { validateBody } from '../middleware/validation';
+import { settlementRunSchema } from '../schemas';
 import { runSettlement } from '../services/settlementService';
 import { getSettlementStats } from '../modules/settlement';
 import { getChainStats, getAllRecords, verifyBatchOnChain, hashBatchData } from '../services/blockchainService';
@@ -17,7 +19,14 @@ import { logger } from '../utils/logger';
 const router = Router();
 
 // POST /api/settlement/run — trigger batch settlement
-router.post('/run', authMiddleware, adminMiddleware, transferRateLimiter, idempotencyMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.post(
+  '/run',
+  authMiddleware,
+  adminMiddleware,
+  transferRateLimiter,
+  validateBody(settlementRunSchema),
+  idempotencyMiddleware,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const result = await runSettlement();
 

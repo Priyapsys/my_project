@@ -7,6 +7,8 @@ import { authMiddleware } from '../middleware/auth';
 import { kycMiddleware } from '../middleware/kyc';
 import { idempotencyMiddleware } from '../middleware/idempotency';
 import { transferRateLimiter } from '../middleware/rateLimit';
+import { validateBody } from '../middleware/validation';
+import { transferSchema } from '../schemas';
 import { executeTransfer } from '../services/transactionService';
 import { AuthenticatedRequest, TransferRequestBody } from '../utils/types';
 import { DomainError } from '../utils/errors';
@@ -18,6 +20,7 @@ router.post(
   '/',
   authMiddleware,
   transferRateLimiter,
+  validateBody(transferSchema),
   kycMiddleware,
   idempotencyMiddleware,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
