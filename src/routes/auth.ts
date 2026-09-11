@@ -9,7 +9,7 @@ import { getKycRecord, setKycStatus } from '../middleware/kyc';
 import { authRateLimiter } from '../middleware/rateLimit';
 import { validateBody } from '../middleware/validation';
 import { loginSchema, signupSchema } from '../schemas';
-import { createUser, getUser, verifyPassword } from '../modules/users';
+import { createUser, getUser, verifyPassword, DUMMY_PASSWORD_HASH } from '../modules/users';
 
 const router = Router();
 
@@ -23,7 +23,10 @@ const handleLogin = async (req: Request, res: Response): Promise<void> => {
 
   if (password) {
     const user = await getUser(cleanUserId);
-    const valid = Boolean(user && (await verifyPassword(password, user.password_hash)));
+    // Mitigate timing side-channel: always evaluate verifyPassword even if user does not exist
+    const hashToVerify = user?.password_hash ?? DUMMY_PASSWORD_HASH;
+    const isPasswordValid = await verifyPassword(password, hashToVerify);
+    const valid = Boolean(user && isPasswordValid);
     if (!valid) {
       res.status(401).json({
         success: false,

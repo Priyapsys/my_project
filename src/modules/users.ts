@@ -34,6 +34,9 @@ export interface UserRecord {
   updated_at: Date;
 }
 
+export const DUMMY_PASSWORD_HASH =
+  'scrypt$16384$8$1$MTIzNDU2Nzg5MDEyMzQ1Ng==$nPcLJQZ+zX347MOPfQ5QFfPgkicqL8TYDNC7d02s0XkwGVA9Iq9A12pjWvtkJV6t2dm765uC02qetOf+ONMg9Q==';
+
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
   const derivedKey = await scryptAsync(password, salt, KEY_LENGTH, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P });

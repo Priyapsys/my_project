@@ -133,6 +133,16 @@ describe('API Gateway: Zod Request Validation', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.token).toBeDefined();
     });
+
+    it('rejects nonexistent user with password using timing-safe credential verification', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ userId: 'nonexistent_user_9999', password: 'WrongPassword123!' });
+
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
+      expect(res.body.code).toBe('INVALID_CREDENTIALS');
+    });
   });
 
   describe('POST /api/auth/signup', () => {
