@@ -53,10 +53,10 @@ export interface DepositResult {
  */
 export async function createDepositIntent(
   userId: string,
-  amount: number,
+  amount: string,
   currency: string
 ): Promise<DepositResult> {
-  if (!amount || amount <= 0) {
+  if (!amount || typeof amount !== 'string' || money.toDecimal(amount).lte(0)) {
     throw new BankIntegrationError('Deposit amount must be greater than zero');
   }
 
@@ -78,7 +78,7 @@ export async function createDepositIntent(
     }
 
     const paymentIntent = await s.paymentIntents.create({
-      amount: money.toMinorUnits(amount), // Stripe expects amount in smallest currency unit (cents)
+      amount: money.toMinorUnits(amount, currency), // Stripe expects amount in smallest currency unit (cents)
       currency: currency.toLowerCase(),
       metadata: {
         userId,
@@ -118,10 +118,10 @@ export interface WithdrawalResult {
  */
 export async function processWithdrawal(
   userId: string,
-  amount: number,
+  amount: string,
   destinationAccountId: string
 ): Promise<WithdrawalResult> {
-  if (!amount || amount <= 0) {
+  if (!amount || typeof amount !== 'string' || money.toDecimal(amount).lte(0)) {
     throw new BankIntegrationError('Withdrawal amount must be greater than zero');
   }
 
@@ -143,7 +143,7 @@ export async function processWithdrawal(
     }
 
     const transfer = await s.transfers.create({
-      amount: money.toMinorUnits(amount), // cents
+      amount: money.toMinorUnits(amount, 'usd'), // cents
       currency: 'usd',
       destination: destinationAccountId,
       metadata: {
@@ -188,7 +188,7 @@ export async function createWithdrawalRecord(
   record: {
     id: string;
     userId: string;
-    amount: number;
+    amount: string;
     currency?: string;
     status?: 'pending' | 'completed' | 'failed';
   },
@@ -355,7 +355,7 @@ export interface WebhookEvent {
   type: string;
   data: {
     userId?: string;
-    amount?: number;
+    amount?: string;
     currency?: string;
     paymentIntentId?: string;
     transferId?: string;
@@ -393,7 +393,7 @@ export function handleStripeWebhook(
         type: event.type,
         data: {
           userId: pi.metadata?.userId,
-          amount: pi.amount ? pi.amount / 100 : undefined,
+          amount: pi.amount !== undefined ? money.fromMinorUnits(pi.amount, pi.currency || 'usd') : undefined,
           currency: pi.currency?.toUpperCase(),
           paymentIntentId: pi.id,
         },
@@ -408,7 +408,7 @@ export function handleStripeWebhook(
         type: event.type,
         data: {
           userId: tr.metadata?.userId,
-          amount: tr.amount ? tr.amount / 100 : undefined,
+          amount: tr.amount !== undefined ? money.fromMinorUnits(tr.amount, tr.currency || 'usd') : undefined,
           currency: tr.currency?.toUpperCase(),
           transferId: tr.id,
         },

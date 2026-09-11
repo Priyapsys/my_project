@@ -60,9 +60,9 @@ describe('Blockchain Integration Tests', () => {
       // Add dummy tx to queue
       const tx = {
         txId: uuidv4(), sender: 'A', receiver: 'B',
-        originalAmount: 10, convertedAmount: 10,
+        originalAmount: '10', convertedAmount: '10',
         sourceCurrency: 'USD', destCurrency: 'USD',
-        rate: 1, complianceScore: 100, status: 'completed',
+        rate: '1', complianceScore: 100, status: 'completed',
         timestamp: new Date()
       };
       

@@ -54,7 +54,7 @@ describe('Transactional Integrity', () => {
       .send({
         senderId: USER,
         receiverId: 'bob',
-        amount: 1000,
+        amount: '1000',
         sourceCurrency: 'USD',
         destCurrency: 'EUR'
       });

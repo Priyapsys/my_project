@@ -41,7 +41,7 @@ describe('Idempotency Middleware Integration', () => {
       .send({
         senderId: USER,
         receiverId: 'bob',
-        amount: 100,
+        amount: '100',
         sourceCurrency: 'USD',
         destCurrency: 'EUR'
       });
@@ -61,7 +61,7 @@ describe('Idempotency Middleware Integration', () => {
       .send({
         senderId: USER,
         receiverId: 'bob',
-        amount: 100,
+        amount: '100',
         sourceCurrency: 'USD',
         destCurrency: 'EUR'
       });
@@ -78,7 +78,7 @@ describe('Idempotency Middleware Integration', () => {
       .send({
         senderId: USER,
         receiverId: 'bob',
-        amount: 100, // Even if body is identical, it skips processing
+        amount: '100', // Even if body is identical, it skips processing
         sourceCurrency: 'USD',
         destCurrency: 'EUR'
       });
@@ -101,7 +101,7 @@ describe('Idempotency Middleware Integration', () => {
       .send({
         senderId: USER,
         receiverId: 'bob',
-        amount: 100,
+        amount: '100',
         sourceCurrency: 'USD',
         destCurrency: 'EUR'
       });
@@ -113,7 +113,7 @@ describe('Idempotency Middleware Integration', () => {
       .send({
         senderId: USER,
         receiverId: 'bob',
-        amount: 100,
+        amount: '100',
         sourceCurrency: 'USD',
         destCurrency: 'EUR'
       });
@@ -133,7 +133,7 @@ describe('Idempotency Middleware Integration', () => {
       .send({
         senderId: USER,
         receiverId: 'bob',
-        amount: 500,
+        amount: '500',
         sourceCurrency: 'USD',
         destCurrency: 'EUR'
       });
@@ -145,7 +145,7 @@ describe('Idempotency Middleware Integration', () => {
       .send({
         senderId: USER,
         receiverId: 'bob',
-        amount: 500,
+        amount: '500',
         sourceCurrency: 'USD',
         destCurrency: 'EUR'
       });

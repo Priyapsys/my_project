@@ -23,6 +23,8 @@ router.post(
     try {
       const { amount, currency } = req.body;
       const userId = req.userId!;
+      const upperCur = currency.toUpperCase() as Currency;
+      const amountStr = money.roundToCurrency(amount, upperCur);
 
       // ── Demo Mode Guard (Bypasses Stripe & directly credits ledger in non-production) ──
       const isDemoRequested =
@@ -44,14 +46,12 @@ router.post(
           return;
         }
 
-        const upperCur = currency.toUpperCase() as Currency;
-        const amountStr = money.toMoneyString(amount);
         await credit(userId, upperCur, amountStr);
         const paymentIntentId = `pi_demo_${Date.now()}`;
 
         logger.info('Demo deposit directly credited to ledger', {
           userId,
-          amount,
+          amount: amountStr,
           currency: upperCur,
           paymentIntentId,
         });
@@ -62,7 +62,7 @@ router.post(
             demo: true,
             credited: true,
             userId,
-            amount,
+            amount: amountStr,
             currency: upperCur,
             paymentIntentId,
           },
@@ -72,9 +72,9 @@ router.post(
       }
 
       // ── Create PaymentIntent ──────────────────────────────────
-      const result = await createDepositIntent(userId, amount, currency);
+      const result = await createDepositIntent(userId, amountStr, currency);
 
-      logger.info('Deposit intent created', { userId, amount, currency, paymentIntentId: result.paymentIntentId });
+      logger.info('Deposit intent created', { userId, amount: amountStr, currency, paymentIntentId: result.paymentIntentId });
 
       res.status(200).json({
         success: true,

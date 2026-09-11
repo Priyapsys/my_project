@@ -77,7 +77,7 @@ pretty "$(curl -s -X POST $BASE/api/transfer \
   -d '{
     "senderId": "alice",
     "receiverId": "bob",
-    "amount": 500,
+    "amount": "500",
     "sourceCurrency": "USD",
     "destCurrency": "INR"
   }')"
@@ -91,7 +91,7 @@ pretty "$(curl -s -X POST $BASE/api/transfer \
   -d '{
     "senderId": "charlie",
     "receiverId": "diana",
-    "amount": 200,
+    "amount": "200",
     "sourceCurrency": "EUR",
     "destCurrency": "AED"
   }')"
@@ -105,7 +105,7 @@ pretty "$(curl -s -X POST $BASE/api/transfer \
   -d '{
     "senderId": "alice",
     "receiverId": "charlie",
-    "amount": 1000,
+    "amount": "1000",
     "sourceCurrency": "USD",
     "destCurrency": "USD"
   }')"
@@ -119,7 +119,7 @@ pretty "$(curl -s -X POST $BASE/api/transfer \
   -d '{
     "senderId": "alice",
     "receiverId": "bob",
-    "amount": 50000,
+    "amount": "50000",
     "sourceCurrency": "USD",
     "destCurrency": "INR"
   }')"

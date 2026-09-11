@@ -5,7 +5,7 @@ describe('Blockchain Unit Tests', () => {
     const batch1 = {
       batchId: 'BATCH-123',
       transactionCount: 2,
-      totalVolume: { USD: 100 },
+      totalVolume: { USD: '100' },
       transactions: [],
       timestamp: new Date('2024-01-01T00:00:00Z'),
     };
@@ -13,7 +13,7 @@ describe('Blockchain Unit Tests', () => {
     const batch2 = {
       batchId: 'BATCH-123',
       transactionCount: 2,
-      totalVolume: { USD: 100 },
+      totalVolume: { USD: '100' },
       transactions: [],
       timestamp: new Date('2024-01-01T00:00:00Z'),
     };

@@ -176,7 +176,7 @@ describe('API Gateway: Zod Request Validation', () => {
         .send({
           senderId: TEST_USER,
           receiverId: TEST_USER,
-          amount: -50,
+          amount: '-50',
           sourceCurrency: 'USD',
           destCurrency: 'EUR',
         });
@@ -194,7 +194,7 @@ describe('API Gateway: Zod Request Validation', () => {
         .send({
           senderId: TEST_USER,
           receiverId: 'bob',
-          amount: 25,
+          amount: '25',
           sourceCurrency: 'USD',
           destCurrency: 'EUR',
         });
@@ -220,7 +220,7 @@ describe('API Gateway: Zod Request Validation', () => {
       const res = await request(app)
         .post('/api/deposit')
         .set('Authorization', `Bearer ${token}`)
-        .send({ amount: 150, currency: 'USD', demo: true });
+        .send({ amount: '150', currency: 'USD', demo: true });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -233,7 +233,7 @@ describe('API Gateway: Zod Request Validation', () => {
       const res = await request(app)
         .post('/api/withdraw')
         .set('Authorization', `Bearer ${token}`)
-        .send({ amount: 100 });
+        .send({ amount: '100' });
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
@@ -305,7 +305,7 @@ describe('API Gateway: Rate Limiting', () => {
         .send({
           senderId: TEST_USER,
           receiverId: 'bob',
-          amount: 10,
+          amount: '10',
           sourceCurrency: 'USD',
           destCurrency: 'EUR',
         });

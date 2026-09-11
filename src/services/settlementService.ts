@@ -21,7 +21,7 @@ export interface SettlementRunResult {
   batchHash: string;
   explorerUrl: string | null;
   transactionCount: number;
-  totalVolume: Record<string, number>;
+  totalVolume: Record<string, string>;
   timestamp: string;
 }
 

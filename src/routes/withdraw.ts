@@ -35,6 +35,7 @@ router.post(
     try {
       const { amount, destinationAccountId } = req.body;
       const userId = req.userId!;
+      const amountStr = money.roundToCurrency(amount, 'USD');
 
     // ── Hold Approach (Reserved-Balance Mechanism) ───────────
     // WE CHOSE THE HOLD APPROACH: Rather than debiting user ledger immediately,
@@ -51,15 +52,15 @@ router.post(
     // Check available balance and create pending request atomically inside a transaction
     await db.transaction(async (trx) => {
       const available = await getAvailableBalance(userId, 'USD', trx);
-      if (money.lt(available, amount)) {
-        throw new InsufficientBalanceError(userId, available, amount, 'USD');
+      if (money.lt(available, amountStr)) {
+        throw new InsufficientBalanceError(userId, available, amountStr, 'USD');
       }
 
       await createWithdrawalRecord(
         {
           id: requestId!,
           userId,
-          amount,
+          amount: amountStr,
           currency: 'USD',
           status: 'pending',
         },
@@ -67,12 +68,12 @@ router.post(
       );
     });
 
-    logger.info('Withdrawal hold placed', { userId, amount, requestId });
+    logger.info('Withdrawal hold placed', { userId, amount: amountStr, requestId });
 
     // ── Create Stripe Transfer ────────────────────────────────
     let result;
     try {
-      result = await processWithdrawal(userId, amount, destinationAccountId);
+      result = await processWithdrawal(userId, amountStr, destinationAccountId);
       await updateWithdrawalStripeTransferId(requestId, result.transferId);
     } catch (stripeErr) {
       // If Stripe transfer creation fails, mark withdrawal request as failed to release hold
@@ -80,7 +81,7 @@ router.post(
       throw stripeErr;
     }
 
-    logger.info('Withdrawal Transfer created', { userId, amount, transferId: result.transferId, requestId });
+    logger.info('Withdrawal Transfer created', { userId, amount: amountStr, transferId: result.transferId, requestId });
 
     res.status(200).json({
       success: true,

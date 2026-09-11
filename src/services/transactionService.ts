@@ -65,7 +65,7 @@ function validateTransferInput(body: TransferRequestBody): void {
   if (senderId === receiverId) {
     throw new ValidationError('Cannot transfer to yourself');
   }
-  if (!amount || typeof amount !== 'number' || amount <= 0) {
+  if (!amount || typeof amount !== 'string' || !/^\d+(\.\d+)?$/.test(amount.trim()) || money.toDecimal(amount).lte(0)) {
     throw new ValidationError('amount must be a positive number');
   }
   if (!sourceCurrency) {
@@ -102,13 +102,13 @@ export async function executeTransfer(
 
   const { senderId, receiverId, amount, sourceCurrency, destCurrency } = body;
 
-  // ── Boundary: convert incoming number to string-decimal ─────
-  const amountStr = money.toMoneyString(amount);
+  // ── Boundary: exact decimal string formatted to currency precision ──
+  const amountStr = money.roundToCurrency(amount, sourceCurrency);
 
   // ── Step 1: Compliance Check (pure, outside DB tx) ─────────
   const compliance = runComplianceCheck({
     userId: senderId,
-    amount,               // compliance scoring uses number (risk score, not ledger)
+    amount: amountStr,
     currency: sourceCurrency,
   });
 

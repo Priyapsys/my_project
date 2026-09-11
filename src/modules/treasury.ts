@@ -124,7 +124,7 @@ export async function validateLiquidity(
 export async function seedReserves(seeds: Partial<Record<Currency, number | string>>): Promise<void> {
   const db = getDb();
   for (const [currency, amount] of Object.entries(seeds)) {
-    const amt = money.toMoneyString(amount ?? 0);
+    const amt = money.toMoneyString(String(amount ?? 0));
     const existing = await db('treasury_reserves').where({ currency }).first();
     if (existing) {
       await db('treasury_reserves').where({ currency }).update({ amount: amt, updated_at: new Date() });

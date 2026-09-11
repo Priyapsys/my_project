@@ -20,7 +20,7 @@ function mapRowToTransaction(row: any): Transaction {
     convertedAmount: String(row.converted_amount),
     sourceCurrency: row.source_currency as Currency,
     destCurrency: row.dest_currency as Currency,
-    rate: Number(row.rate),
+    rate: String(row.rate),
     complianceScore: Number(row.compliance_score),
     status: row.status,
     batchId: row.batch_id ?? undefined,

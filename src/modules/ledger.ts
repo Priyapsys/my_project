@@ -52,7 +52,7 @@ export async function getBalance(userId: string, trx?: Knex.Transaction): Promis
 
   const balances: CurrencyBalances = {};
   for (const row of rows) {
-    balances[row.currency as Currency] = String(row.balance);
+    balances[row.currency as Currency] = money.roundToCurrency(String(row.balance), row.currency as Currency);
   }
   return balances;
 }
@@ -73,7 +73,7 @@ export async function getBalanceForCurrency(
   }
 
   const row = await query;
-  return row ? String(row.balance) : money.ZERO;
+  return row ? money.roundToCurrency(String(row.balance), currency) : money.ZERO;
 }
 
 export async function setBalance(
@@ -141,8 +141,12 @@ export async function getPendingWithdrawalHolds(
     query = query.whereNot({ id: excludeRequestId });
   }
 
-  const row = await query.sum('amount as totalHold').first();
-  return row && row.totalHold ? String(row.totalHold) : money.ZERO;
+  const rows = await query.select('amount');
+  let totalHold = money.ZERO;
+  for (const row of rows) {
+    totalHold = money.add(totalHold, String(row.amount));
+  }
+  return totalHold;
 }
 
 export async function getAvailableBalance(
@@ -154,7 +158,8 @@ export async function getAvailableBalance(
   const total = await getBalanceForCurrency(userId, currency, trx);
   const hold = await getPendingWithdrawalHolds(userId, currency, trx, excludeRequestId);
   const available = money.sub(total, hold);
-  return money.max(available, money.ZERO);
+  const nonNegative = money.max(available, money.ZERO);
+  return money.roundToCurrency(nonNegative, currency);
 }
 
 export async function debit(
@@ -287,7 +292,7 @@ export async function seedBalances(
   seeds: Array<{ userId: string; currency: Currency; amount: number | string }>
 ): Promise<void> {
   for (const { userId, currency, amount } of seeds) {
-    await setBalance(userId, currency, money.toMoneyString(amount));
+    await setBalance(userId, currency, money.toMoneyString(String(amount)));
     logger.info(`Seeded balance: ${userId} → ${amount} ${currency}`);
   }
 }
@@ -326,7 +331,7 @@ function rowToTransaction(row: any): Transaction {
     convertedAmount: String(row.converted_amount),
     sourceCurrency: row.source_currency as Currency,
     destCurrency: row.dest_currency as Currency,
-    rate: parseFloat(row.rate),     // rate is a ratio, not money — stays number
+    rate: String(row.rate),
     complianceScore: row.compliance_score,
     status: row.status,
     batchId: row.batch_id ?? undefined,

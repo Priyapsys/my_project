@@ -62,7 +62,7 @@ export interface ComplianceResult {
 export interface FxResult {
   sourceCurrency: Currency;
   destCurrency: Currency;
-  rate: number;              // ratio, not money — stays number
+  rate: string;              // exact string representation
   originalAmount: string;
   convertedAmount: string;
   pair: string;
@@ -81,7 +81,7 @@ export interface Transaction {
   convertedAmount: string;
   sourceCurrency: Currency;
   destCurrency: Currency;
-  rate: number;                 // ratio, not money — stays number
+  rate: string;                 // exact string representation
   complianceScore: number;
   status: TransactionStatus;
   timestamp: Date;
@@ -143,7 +143,7 @@ export type ApiResponse<T = unknown> = ApiSuccess<T> | ApiError;
 export interface TransferRequestBody {
   senderId: string;
   receiverId: string;
-  amount: number;
+  amount: string;
   sourceCurrency: Currency;
   destCurrency: Currency;
 }

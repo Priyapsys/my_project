@@ -3,8 +3,30 @@
 // ============================================================
 
 import { z } from 'zod';
+import Decimal from 'decimal.js';
 
 const CURRENCIES = ['USD', 'INR', 'GBP', 'EUR', 'AED', 'JPY'] as const;
+
+/**
+ * Validates that an amount is provided as a non-empty string representing
+ * a strictly positive exact decimal number.
+ */
+const positiveDecimalString = (field = 'amount') =>
+  z
+    .string({ message: `${field} must be a positive number` })
+    .trim()
+    .min(1, `${field} is required`)
+    .regex(/^\d+(\.\d+)?$/, `${field} must be a positive number`)
+    .refine(
+      (val) => {
+        try {
+          return new Decimal(val).gt(0);
+        } catch {
+          return false;
+        }
+      },
+      { message: `${field} must be a positive number` }
+    );
 
 /**
  * Transfer Request Schema
@@ -14,9 +36,7 @@ export const transferSchema = z
   .object({
     senderId: z.string({ message: 'senderId is required' }).min(1, 'senderId is required'),
     receiverId: z.string({ message: 'receiverId is required' }).min(1, 'receiverId is required'),
-    amount: z
-      .number({ message: 'amount must be a positive number' })
-      .positive('amount must be a positive number'),
+    amount: positiveDecimalString('amount'),
     sourceCurrency: z.enum(CURRENCIES, {
       message: 'sourceCurrency is required and must be a supported currency',
     }),
@@ -36,9 +56,7 @@ export type TransferSchemaInput = z.infer<typeof transferSchema>;
  * Body for POST /api/deposit
  */
 export const depositSchema = z.object({
-  amount: z
-    .number({ message: 'amount is required and must be a positive number' })
-    .positive('amount is required and must be a positive number'),
+  amount: positiveDecimalString('amount'),
   currency: z
     .string({ message: 'currency is required' })
     .min(1, 'currency is required'),
@@ -52,9 +70,7 @@ export type DepositSchemaInput = z.infer<typeof depositSchema>;
  * Body for POST /api/withdraw
  */
 export const withdrawSchema = z.object({
-  amount: z
-    .number({ message: 'amount is required and must be a positive number' })
-    .positive('amount is required and must be a positive number'),
+  amount: positiveDecimalString('amount'),
   destinationAccountId: z
     .string({ message: 'destinationAccountId is required' })
     .min(1, 'destinationAccountId is required'),

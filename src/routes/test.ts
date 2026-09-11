@@ -8,6 +8,7 @@ import { setBalance } from '../modules/ledger';
 import { seedReserves } from '../modules/treasury';
 import { seedKycVerified } from '../modules/kyc';
 import { ensureUser } from '../modules/users';
+import * as money from '../utils/money';
 
 const router = Router();
 
@@ -72,7 +73,7 @@ router.post('/seed-user', async (req: Request, res: Response) => {
 
     if (balances && typeof balances === 'object') {
       for (const [cur, amt] of Object.entries(balances)) {
-        await setBalance(userId, cur as import('../utils/types').Currency, Number(amt));
+        await setBalance(userId, cur as import('../utils/types').Currency, money.toMoneyString(String(amt)));
       }
     }
 

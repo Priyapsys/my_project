@@ -1,22 +1,25 @@
 import { useState } from 'react'
+import Decimal from 'decimal.js'
 import { api } from '../api'
 import styles from './SendMoneyForm.module.css'
 
 const CURRENCIES = ['USD', 'INR', 'GBP', 'EUR', 'AED', 'JPY']
 const FX_RATES = {
-  USD: { USD:1, INR:83.5, GBP:0.789, EUR:0.924, AED:3.673, JPY:151.6 },
-  INR: { USD:0.01198, INR:1, GBP:0.00945, EUR:0.01107, AED:0.043, JPY:1.816 },
-  GBP: { USD:1.267, INR:105.83, GBP:1, EUR:1.171, AED:4.653, JPY:192.1 },
-  EUR: { USD:1.082, INR:90.35, GBP:0.854, EUR:1, AED:3.975, JPY:164.1 },
-  AED: { USD:0.2723, INR:22.73, GBP:0.2149, EUR:0.2516, AED:1, JPY:41.28 },
-  JPY: { USD:0.0066, INR:0.5508, GBP:0.00521, EUR:0.0061, AED:0.02422, JPY:1 },
+  USD: { USD: '1',       INR: '83.5',    GBP: '0.789',   EUR: '0.924',   AED: '3.673',   JPY: '151.6'  },
+  INR: { USD: '0.01198', INR: '1',       GBP: '0.00945', EUR: '0.01107', AED: '0.043',   JPY: '1.816'  },
+  GBP: { USD: '1.267',   INR: '105.83',  GBP: '1',       EUR: '1.171',   AED: '4.653',   JPY: '192.1'  },
+  EUR: { USD: '1.082',   INR: '90.35',   GBP: '0.854',   EUR: '1',       AED: '3.975',   JPY: '164.1'  },
+  AED: { USD: '0.2723',  INR: '22.73',   GBP: '0.2149',  EUR: '0.2516',  AED: '1',       JPY: '41.28'  },
+  JPY: { USD: '0.00660', INR: '0.5508',  GBP: '0.00521', EUR: '0.00610', AED: '0.02422', JPY: '1'     },
 }
 
 function fmt(amount, currency) {
+  const num = typeof amount === 'number' ? amount : Number(amount)
   return new Intl.NumberFormat('en-US', {
     style: 'currency', currency,
     minimumFractionDigits: currency === 'JPY' ? 0 : 2,
-  }).format(amount)
+    maximumFractionDigits: currency === 'JPY' ? 0 : 2,
+  }).format(num)
 }
 
 export default function SendMoneyForm({ session, addToast, onSuccess }) {
@@ -26,9 +29,16 @@ export default function SendMoneyForm({ session, addToast, onSuccess }) {
   const [loading, setLoading]   = useState(false)
   const [result, setResult]     = useState(null)
 
-  const rate = FX_RATES[form.sourceCurrency]?.[form.destCurrency] ?? 1
-  const preview = form.amount && !isNaN(form.amount)
-    ? parseFloat(form.amount) * rate : null
+  const rate = FX_RATES[form.sourceCurrency]?.[form.destCurrency] ?? '1'
+  let preview = null
+  if (form.amount && !isNaN(form.amount) && Number(form.amount) > 0) {
+    try {
+      const decimals = form.destCurrency === 'JPY' ? 0 : 2
+      preview = new Decimal(form.amount.trim()).times(new Decimal(rate)).toFixed(decimals)
+    } catch {
+      preview = null
+    }
+  }
 
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }))
@@ -44,7 +54,7 @@ export default function SendMoneyForm({ session, addToast, onSuccess }) {
       const data = await api.transfer(session.token, {
         senderId: session.userId,
         receiverId: form.receiverId,
-        amount: parseFloat(form.amount),
+        amount: form.amount.trim(),
         sourceCurrency: form.sourceCurrency,
         destCurrency: form.destCurrency,
       })

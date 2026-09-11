@@ -74,7 +74,7 @@ describe('Concurrency Safety', () => {
         .send({
           senderId: USER,
           receiverId: 'bob',
-          amount: 200,
+          amount: '200',
           sourceCurrency: 'USD',
           destCurrency: 'GBP',
         });
@@ -106,7 +106,7 @@ describe('Concurrency Safety', () => {
         .post('/api/withdraw')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          amount: 200,
+          amount: '200',
           destinationAccountId: 'acct_conc_123',
         });
     });
@@ -127,6 +127,6 @@ describe('Concurrency Safety', () => {
     expect(Number(balanceRow.balance)).toBe(1000);
 
     const availBalance = await getAvailableBalance(USER, 'USD');
-    expect(availBalance).toBe(0);
+    expect(availBalance).toBe('0.00');
   });
 });
