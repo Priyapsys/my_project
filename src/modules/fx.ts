@@ -4,6 +4,7 @@
 
 import { Currency, FxResult } from '../utils/types';
 import { logger } from '../utils/logger';
+import * as money from '../utils/money';
 
 type RateTable = Record<string, Record<string, number>>;
 
@@ -74,7 +75,7 @@ async function fetchLiveRates(): Promise<RateTable> {
 export async function convert(
   sourceCurrency: Currency,
   destCurrency: Currency,
-  amount: number
+  amount: number | string
 ): Promise<FxResult> {
   const rateTable = await fetchLiveRates();
   const rateRow = rateTable[sourceCurrency];
@@ -89,16 +90,18 @@ export async function convert(
     );
   }
 
-  const convertedAmount = parseFloat((amount * rate).toFixed(4));
+  // Exact decimal multiplication: amount × rate
+  const convertedAmount = money.mul(amount, rate);
+  const originalAmountStr = money.toMoneyString(amount);
   const pair = `${sourceCurrency}/${destCurrency}`;
 
-  logger.debug(`FX conversion`, { pair, rate, amount, convertedAmount });
+  logger.debug(`FX conversion`, { pair, rate, amount: originalAmountStr, convertedAmount });
 
   return {
     sourceCurrency,
     destCurrency,
     rate,
-    originalAmount: amount,
+    originalAmount: originalAmountStr,
     convertedAmount,
     pair,
   };

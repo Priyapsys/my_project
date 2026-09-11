@@ -11,6 +11,12 @@
 //  - Balance reads use SELECT FOR UPDATE when inside a transaction to
 //    prevent concurrent stale-balance reads.
 //  - Public interface (function names + parameter shapes) is preserved.
+//
+//  CHANGE LOG (Phase 2 — Exact Decimal Arithmetic):
+//  ─────────────────────────────────────────────────
+//  - All monetary arithmetic now uses decimal.js via src/utils/money.ts.
+//  - Values travel as strings between DB ↔ JS — no parseFloat on money.
+//  - Balance fields, amounts, and totals are `string` not `number`.
 // ============================================================
 
 import { v4 as uuidv4 } from 'uuid';
@@ -19,6 +25,7 @@ import { Currency, CurrencyBalances, Transaction } from '../utils/types';
 import { logger } from '../utils/logger';
 import { getDb } from '../db/connection';
 import { InsufficientBalanceError, LedgerWriteError, ConcurrentUpdateError } from '../utils/errors';
+import * as money from '../utils/money';
 
 // ----------------------------
 //  Helper: get query builder, optionally scoped to a transaction
@@ -45,7 +52,7 @@ export async function getBalance(userId: string, trx?: Knex.Transaction): Promis
 
   const balances: CurrencyBalances = {};
   for (const row of rows) {
-    balances[row.currency as Currency] = parseFloat(row.balance);
+    balances[row.currency as Currency] = String(row.balance);
   }
   return balances;
 }
@@ -54,7 +61,7 @@ export async function getBalanceForCurrency(
   userId: string,
   currency: Currency,
   trx?: Knex.Transaction
-): Promise<number> {
+): Promise<string> {
   let query = accountsTable(trx)
     .where({ user_id: userId, currency })
     .select('balance')
@@ -66,17 +73,17 @@ export async function getBalanceForCurrency(
   }
 
   const row = await query;
-  return row ? parseFloat(row.balance) : 0;
+  return row ? String(row.balance) : money.ZERO;
 }
 
 export async function setBalance(
   userId: string,
   currency: Currency,
-  amount: number,
+  amount: string,
   trx?: Knex.Transaction,
   expectedVersion?: number
 ): Promise<void> {
-  const rounded = parseFloat(amount.toFixed(4));
+  const rounded = money.toMoneyString(amount);
   const table = accountsTable(trx);
 
   // Upsert: insert or update
@@ -110,11 +117,11 @@ export async function setBalance(
 export async function updateBalance(
   userId: string,
   currency: Currency,
-  delta: number,
+  delta: string,
   trx?: Knex.Transaction
-): Promise<number> {
+): Promise<string> {
   const current = await getBalanceForCurrency(userId, currency, trx);
-  const updated = parseFloat((current + delta).toFixed(4));
+  const updated = money.add(current, delta);
   await setBalance(userId, currency, updated, trx);
   logger.debug(`Ledger balance updated`, { userId, currency, delta, newBalance: updated });
   return updated;
@@ -125,7 +132,7 @@ export async function getPendingWithdrawalHolds(
   currency: Currency,
   trx?: Knex.Transaction,
   excludeRequestId?: string
-): Promise<number> {
+): Promise<string> {
   const db = trx ?? getDb();
   let query = db('withdrawal_requests')
     .where({ user_id: userId, currency, status: 'pending' });
@@ -135,7 +142,7 @@ export async function getPendingWithdrawalHolds(
   }
 
   const row = await query.sum('amount as totalHold').first();
-  return row && row.totalHold ? parseFloat(String(row.totalHold)) : 0;
+  return row && row.totalHold ? String(row.totalHold) : money.ZERO;
 }
 
 export async function getAvailableBalance(
@@ -143,31 +150,34 @@ export async function getAvailableBalance(
   currency: Currency,
   trx?: Knex.Transaction,
   excludeRequestId?: string
-): Promise<number> {
+): Promise<string> {
   const total = await getBalanceForCurrency(userId, currency, trx);
   const hold = await getPendingWithdrawalHolds(userId, currency, trx, excludeRequestId);
-  return Math.max(0, parseFloat((total - hold).toFixed(4)));
+  const available = money.sub(total, hold);
+  return money.max(available, money.ZERO);
 }
 
 export async function debit(
   userId: string,
   currency: Currency,
-  amount: number,
+  amount: string,
   trx?: Knex.Transaction,
   excludeRequestId?: string
 ): Promise<void> {
   // getAvailableBalance acquires FOR UPDATE lock via getBalanceForCurrency when trx is provided
   const available = await getAvailableBalance(userId, currency, trx, excludeRequestId);
-  if (available < amount) {
+  if (money.lt(available, amount)) {
     throw new InsufficientBalanceError(userId, available, amount, currency);
   }
-  await updateBalance(userId, currency, -amount, trx);
+  // delta is negative for debit
+  const negAmount = money.sub(money.ZERO, amount);
+  await updateBalance(userId, currency, negAmount, trx);
 }
 
 export async function credit(
   userId: string,
   currency: Currency,
-  amount: number,
+  amount: string,
   trx?: Knex.Transaction
 ): Promise<void> {
   await updateBalance(userId, currency, amount, trx);
@@ -274,10 +284,10 @@ export async function getAllSettlementBatches(): Promise<any[]> {
 // ----------------------------
 
 export async function seedBalances(
-  seeds: Array<{ userId: string; currency: Currency; amount: number }>
+  seeds: Array<{ userId: string; currency: Currency; amount: number | string }>
 ): Promise<void> {
   for (const { userId, currency, amount } of seeds) {
-    await setBalance(userId, currency, amount);
+    await setBalance(userId, currency, money.toMoneyString(amount));
     logger.info(`Seeded balance: ${userId} → ${amount} ${currency}`);
   }
 }
@@ -294,7 +304,7 @@ export async function getLedgerSnapshot(): Promise<Record<string, CurrencyBalanc
   const snapshot: Record<string, CurrencyBalances> = {};
   for (const row of rows) {
     if (!snapshot[row.user_id]) snapshot[row.user_id] = {};
-    snapshot[row.user_id][row.currency as Currency] = parseFloat(row.balance);
+    snapshot[row.user_id][row.currency as Currency] = String(row.balance);
   }
   return snapshot;
 }
@@ -312,11 +322,11 @@ function rowToTransaction(row: any): Transaction {
     txId: row.tx_id,
     sender: row.sender,
     receiver: row.receiver,
-    originalAmount: parseFloat(row.original_amount),
-    convertedAmount: parseFloat(row.converted_amount),
+    originalAmount: String(row.original_amount),
+    convertedAmount: String(row.converted_amount),
     sourceCurrency: row.source_currency as Currency,
     destCurrency: row.dest_currency as Currency,
-    rate: parseFloat(row.rate),
+    rate: parseFloat(row.rate),     // rate is a ratio, not money — stays number
     complianceScore: row.compliance_score,
     status: row.status,
     batchId: row.batch_id ?? undefined,

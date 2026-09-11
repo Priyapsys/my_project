@@ -12,6 +12,7 @@ import { Knex } from 'knex';
 import { logger } from '../utils/logger';
 import { DomainError } from '../utils/errors';
 import { getDb } from '../db/connection';
+import * as money from '../utils/money';
 
 // ── Custom Error ────────────────────────────────────────────
 
@@ -77,7 +78,7 @@ export async function createDepositIntent(
     }
 
     const paymentIntent = await s.paymentIntents.create({
-      amount: Math.round(amount * 100), // Stripe expects amount in smallest currency unit (cents)
+      amount: money.toMinorUnits(amount), // Stripe expects amount in smallest currency unit (cents)
       currency: currency.toLowerCase(),
       metadata: {
         userId,
@@ -142,7 +143,7 @@ export async function processWithdrawal(
     }
 
     const transfer = await s.transfers.create({
-      amount: Math.round(amount * 100), // cents
+      amount: money.toMinorUnits(amount), // cents
       currency: 'usd',
       destination: destinationAccountId,
       metadata: {
@@ -175,7 +176,7 @@ export async function processWithdrawal(
 export interface WithdrawalRequestRecord {
   id: string;
   user_id: string;
-  amount: number;
+  amount: string;
   currency: string;
   stripe_transfer_id: string | null;
   status: 'pending' | 'completed' | 'failed';
@@ -208,7 +209,7 @@ export async function createWithdrawalRecord(
   await db('withdrawal_requests').insert(data);
   return {
     ...data,
-    amount: parseFloat(String(data.amount)),
+    amount: String(data.amount),
   };
 }
 
@@ -262,7 +263,7 @@ export async function getWithdrawalRecordByTransferId(
   return {
     id: row.id,
     user_id: row.user_id,
-    amount: parseFloat(String(row.amount)),
+    amount: String(row.amount),
     currency: row.currency,
     stripe_transfer_id: row.stripe_transfer_id,
     status: row.status,
@@ -281,7 +282,7 @@ export async function getWithdrawalRecordById(
   return {
     id: row.id,
     user_id: row.user_id,
-    amount: parseFloat(String(row.amount)),
+    amount: String(row.amount),
     currency: row.currency,
     stripe_transfer_id: row.stripe_transfer_id,
     status: row.status,
@@ -301,7 +302,7 @@ export async function getUserWithdrawalRecords(
   return rows.map((row) => ({
     id: row.id,
     user_id: row.user_id,
-    amount: parseFloat(String(row.amount)),
+    amount: String(row.amount),
     currency: row.currency,
     stripe_transfer_id: row.stripe_transfer_id,
     status: row.status,

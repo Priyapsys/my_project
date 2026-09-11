@@ -37,10 +37,10 @@ export class FxError extends DomainError {
  */
 export class InsufficientBalanceError extends DomainError {
   public readonly userId: string;
-  public readonly available: number;
-  public readonly required: number;
+  public readonly available: string | number;
+  public readonly required: string | number;
 
-  constructor(userId: string, available: number, required: number, currency: string) {
+  constructor(userId: string, available: string | number, required: string | number, currency: string) {
     super(
       'INSUFFICIENT_FUNDS',
       `${userId} has ${available} ${currency}, needs ${required}`
@@ -55,10 +55,10 @@ export class InsufficientBalanceError extends DomainError {
  * Treasury (system liquidity pool) does not have enough reserves.
  */
 export class InsufficientLiquidityError extends DomainError {
-  public readonly available: number;
-  public readonly required: number;
+  public readonly available: string | number;
+  public readonly required: string | number;
 
-  constructor(available: number, required: number, currency: string) {
+  constructor(available: string | number, required: string | number, currency: string) {
     super(
       'INSUFFICIENT_LIQUIDITY',
       `Treasury has ${available} ${currency}, required ${required}`

@@ -21,6 +21,7 @@ import { AuthenticatedRequest } from '../utils/types';
 import { logger } from '../utils/logger';
 import { DomainError, InsufficientBalanceError } from '../utils/errors';
 import { getDb } from '../db/connection';
+import * as money from '../utils/money';
 
 const router = Router();
 
@@ -50,7 +51,7 @@ router.post(
     // Check available balance and create pending request atomically inside a transaction
     await db.transaction(async (trx) => {
       const available = await getAvailableBalance(userId, 'USD', trx);
-      if (available < amount) {
+      if (money.lt(available, amount)) {
         throw new InsufficientBalanceError(userId, available, amount, 'USD');
       }
 

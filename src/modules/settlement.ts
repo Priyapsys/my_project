@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Transaction, BatchSummary, Currency } from '../utils/types';
 import { logger } from '../utils/logger';
 import { getDb } from '../db/connection';
+import * as money from '../utils/money';
 
 // ----------------------------
 //  Row Mapper
@@ -15,8 +16,8 @@ function mapRowToTransaction(row: any): Transaction {
     txId: row.tx_id,
     sender: row.sender,
     receiver: row.receiver,
-    originalAmount: Number(row.original_amount),
-    convertedAmount: Number(row.converted_amount),
+    originalAmount: String(row.original_amount),
+    convertedAmount: String(row.converted_amount),
     sourceCurrency: row.source_currency as Currency,
     destCurrency: row.dest_currency as Currency,
     rate: Number(row.rate),
@@ -76,7 +77,7 @@ export async function getQueue(): Promise<Transaction[]> {
 // ----------------------------
 interface NetPosition {
   [userId: string]: {
-    [currency: string]: number; // positive = net owed, negative = net owes
+    [currency: string]: string; // positive = net owed, negative = net owes
   };
 }
 
@@ -86,13 +87,17 @@ function computeNetting(transactions: Transaction[]): NetPosition {
   for (const tx of transactions) {
     // Debit sender
     if (!positions[tx.sender]) positions[tx.sender] = {};
-    positions[tx.sender][tx.sourceCurrency] =
-      (positions[tx.sender][tx.sourceCurrency] ?? 0) - tx.originalAmount;
+    positions[tx.sender][tx.sourceCurrency] = money.sub(
+      positions[tx.sender][tx.sourceCurrency] ?? money.ZERO,
+      tx.originalAmount
+    );
 
     // Credit receiver
     if (!positions[tx.receiver]) positions[tx.receiver] = {};
-    positions[tx.receiver][tx.destCurrency] =
-      (positions[tx.receiver][tx.destCurrency] ?? 0) + tx.convertedAmount;
+    positions[tx.receiver][tx.destCurrency] = money.add(
+      positions[tx.receiver][tx.destCurrency] ?? money.ZERO,
+      tx.convertedAmount
+    );
   }
 
   return positions;
@@ -101,12 +106,13 @@ function computeNetting(transactions: Transaction[]): NetPosition {
 // ----------------------------
 //  Compute Total Volume
 // ----------------------------
-function computeVolume(transactions: Transaction[]): Record<string, number> {
-  const volume: Record<string, number> = {};
+function computeVolume(transactions: Transaction[]): Record<string, string> {
+  const volume: Record<string, string> = {};
   for (const tx of transactions) {
     const { sourceCurrency, originalAmount } = tx;
-    volume[sourceCurrency] = parseFloat(
-      ((volume[sourceCurrency] ?? 0) + originalAmount).toFixed(4)
+    volume[sourceCurrency] = money.add(
+      volume[sourceCurrency] ?? money.ZERO,
+      originalAmount
     );
   }
   return volume;

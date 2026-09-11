@@ -10,6 +10,7 @@ import { createDepositIntent, BankIntegrationError } from '../modules/bankIntegr
 import { credit } from '../modules/ledger';
 import { AuthenticatedRequest, Currency } from '../utils/types';
 import { logger } from '../utils/logger';
+import * as money from '../utils/money';
 
 const router = Router();
 
@@ -44,7 +45,8 @@ router.post(
         }
 
         const upperCur = currency.toUpperCase() as Currency;
-        await credit(userId, upperCur, amount);
+        const amountStr = money.toMoneyString(amount);
+        await credit(userId, upperCur, amountStr);
         const paymentIntentId = `pi_demo_${Date.now()}`;
 
         logger.info('Demo deposit directly credited to ledger', {

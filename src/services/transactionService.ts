@@ -47,6 +47,7 @@ import {
 } from '../modules/ledger';
 import { enqueue } from '../modules/settlement';
 import { getDb } from '../db/connection';
+import * as money from '../utils/money';
 
 // ----------------------------
 //  Input Validation
@@ -101,10 +102,13 @@ export async function executeTransfer(
 
   const { senderId, receiverId, amount, sourceCurrency, destCurrency } = body;
 
+  // ── Boundary: convert incoming number to string-decimal ─────
+  const amountStr = money.toMoneyString(amount);
+
   // ── Step 1: Compliance Check (pure, outside DB tx) ─────────
   const compliance = runComplianceCheck({
     userId: senderId,
-    amount,
+    amount,               // compliance scoring uses number (risk score, not ledger)
     currency: sourceCurrency,
   });
 
@@ -121,7 +125,7 @@ export async function executeTransfer(
   //  (unsupported pair), no side effects need rollback.
   let fx;
   try {
-    fx = await convert(sourceCurrency, destCurrency, amount);
+    fx = await convert(sourceCurrency, destCurrency, amountStr);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new FxError(message);
@@ -152,25 +156,25 @@ export async function executeTransfer(
     //  This serializes concurrent transfers from the same account.
 
     // Step 5: Debit sender (locked row)
-    await debit(senderId, sourceCurrency, amount, trx);
+    await debit(senderId, sourceCurrency, amountStr, trx);
 
     // Step 6: Credit receiver
     await credit(receiverId, destCurrency, fx.convertedAmount, trx);
     logger.tx(`Ledger updated`, {
-      debit: `${senderId} -${amount} ${sourceCurrency}`,
+      debit: `${senderId} -${amountStr} ${sourceCurrency}`,
       credit: `${receiverId} +${fx.convertedAmount} ${destCurrency}`,
     });
 
     // Step 7: Treasury update (payout destCurrency, receive sourceCurrency)
     await deductReserve(destCurrency, fx.convertedAmount, trx);
-    await addReserve(sourceCurrency, amount, trx);
+    await addReserve(sourceCurrency, amountStr, trx);
 
     // Step 8: Build & store transaction record
     tx = {
       txId,
       sender: senderId,
       receiver: receiverId,
-      originalAmount: amount,
+      originalAmount: amountStr,
       convertedAmount: fx.convertedAmount,
       sourceCurrency,
       destCurrency,
@@ -199,7 +203,7 @@ export async function executeTransfer(
     txId,
     sender: senderId,
     receiver: receiverId,
-    originalAmount: amount,
+    originalAmount: amountStr,
     convertedAmount: fx.convertedAmount,
     sourceCurrency,
     destCurrency,

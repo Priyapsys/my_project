@@ -9,7 +9,7 @@ import { Request } from 'express';
 // ----------------------------
 export type Currency = 'USD' | 'INR' | 'GBP' | 'EUR' | 'AED' | 'JPY';
 
-export type CurrencyBalances = Partial<Record<Currency, number>>;
+export type CurrencyBalances = Partial<Record<Currency, string>>;
 
 // ----------------------------
 //  Auth
@@ -62,9 +62,9 @@ export interface ComplianceResult {
 export interface FxResult {
   sourceCurrency: Currency;
   destCurrency: Currency;
-  rate: number;
-  originalAmount: number;
-  convertedAmount: number;
+  rate: number;              // ratio, not money — stays number
+  originalAmount: string;
+  convertedAmount: string;
   pair: string;
 }
 
@@ -77,11 +77,11 @@ export interface Transaction {
   txId: string;
   sender: string;
   receiver: string;
-  originalAmount: number;
-  convertedAmount: number;
+  originalAmount: string;
+  convertedAmount: string;
   sourceCurrency: Currency;
   destCurrency: Currency;
-  rate: number;
+  rate: number;                 // ratio, not money — stays number
   complianceScore: number;
   status: TransactionStatus;
   timestamp: Date;
@@ -92,7 +92,7 @@ export interface Transaction {
 //  Treasury
 // ----------------------------
 export interface TreasuryReserves {
-  [currency: string]: number;
+  [currency: string]: string;
 }
 
 // ----------------------------
@@ -101,7 +101,7 @@ export interface TreasuryReserves {
 export interface BatchSummary {
   batchId: string;
   transactionCount: number;
-  totalVolume: Record<string, number>;
+  totalVolume: Record<string, string>;
   transactions: Transaction[];
   timestamp: Date;
   blockchainTxHash?: string;
@@ -156,8 +156,8 @@ export interface TransferResponse {
   txId: string;
   sender: string;
   receiver: string;
-  originalAmount: number;
-  convertedAmount: number;
+  originalAmount: string;
+  convertedAmount: string;
   sourceCurrency: Currency;
   destCurrency: Currency;
   compliance: ComplianceResult;
