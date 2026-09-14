@@ -13,18 +13,14 @@ let token: string;
 const TEST_USER = 'gateway-user';
 
 beforeAll(async () => {
-  try {
-    await initDatabase();
-  } catch (e) {}
+  await initDatabase();
   token = issueToken(TEST_USER);
   await seedKycVerified([TEST_USER, 'bob']);
   await ensureUser(TEST_USER, 'TestPassword123!', 'admin');
 });
 
 afterAll(async () => {
-  try {
-    await closeDatabase();
-  } catch (e) {}
+  await closeDatabase();
 });
 
 beforeEach(async () => {

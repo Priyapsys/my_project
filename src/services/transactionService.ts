@@ -187,12 +187,11 @@ export async function executeTransfer(
     await storeTransaction(tx!, trx);
     logger.tx(`Transaction stored`, { txId, status: tx!.status });
 
+    // ── Step 9: Push to Settlement Queue (ATOMIC with transfer) ──
+    await enqueue(tx!, trx);
+
     // ── COMMIT happens automatically when this callback returns ──
   });
-
-  // ── Step 9: Push to Settlement Queue (AFTER commit) ────────
-  //  Persisted in PostgreSQL/SQLite settlement_queue table.
-  await enqueue(tx!);
 
   // ── Step 10: Return Response ───────────────────────────────
   logger.success(`Transfer complete`, { txId });

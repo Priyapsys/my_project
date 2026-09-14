@@ -8,6 +8,7 @@ import { logger } from './utils/logger';
 
 // ── Database ────────────────────────────────────────────────
 import { initDatabase, closeDatabase } from './db/connection';
+import { cleanupExpiredIdempotencyKeys } from './middleware/idempotency';
 
 // ── Security & Gateway Middleware ───────────────────────────
 import helmet from 'helmet';
@@ -211,6 +212,10 @@ async function start(): Promise<void> {
       try {
         const result = await reconcilePendingBatches();
         logger.info('Reconciliation worker completed', result);
+        const cleaned = await cleanupExpiredIdempotencyKeys();
+        if (cleaned > 0) {
+          logger.info(`Cleaned up ${cleaned} expired idempotency keys`);
+        }
       } catch (err) {
         logger.error('Reconciliation worker failed', {
           error: err instanceof Error ? err.message : String(err),

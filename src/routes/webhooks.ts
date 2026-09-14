@@ -20,6 +20,7 @@ import { credit, debit } from '../modules/ledger';
 import { Currency } from '../utils/types';
 import { logger } from '../utils/logger';
 import { getDb } from '../db/connection';
+import * as money from '../utils/money';
 
 const router = Router();
 
@@ -84,13 +85,56 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
             }
 
             const record = await getWithdrawalRecordByTransferId(transferId, trx);
-            if (record && record.status === 'pending') {
-              const debitUser = userId || record.user_id;
-              const debitAmount = amount || record.amount;
-              const debitCurrency = (record.currency || 'USD') as Currency;
+            if (!record) {
+              logger.warn('Withdrawal transfer.paid ignored (unknown transfer ID)', { transferId });
+              return;
+            }
+
+            if (record.status === 'completed') {
+              logger.info('Withdrawal transfer.paid already completed (idempotent)', { transferId });
+              return;
+            }
+
+            const debitCurrency = (record.currency || 'USD') as Currency;
+            const recordAmount = money.roundToCurrency(record.amount, debitCurrency);
+            const recordCurrency = debitCurrency.toUpperCase();
+            const webhookAmount = event.data.amount
+              ? money.roundToCurrency(event.data.amount, debitCurrency)
+              : null;
+            const webhookCurrency = event.data.currency ? event.data.currency.toUpperCase() : null;
+
+            // Amount / currency mismatch validation
+            if (
+              (webhookAmount && !money.eq(webhookAmount, recordAmount)) ||
+              (webhookCurrency && webhookCurrency !== recordCurrency)
+            ) {
+              logger.error('CRITICAL: Withdrawal webhook amount or currency mismatch', {
+                transferId,
+                recordAmount,
+                webhookAmount,
+                recordCurrency,
+                webhookCurrency,
+                requestId: record.id,
+              });
+
+              await updateWithdrawalStatus(record.id, 'failed', trx);
+              await recordProcessedWebhook({
+                id: uuidv4(),
+                event_type: event.type,
+                source_id: transferId,
+              }, trx);
+              return;
+            }
+
+            if (
+              record.status === 'provider_pending' ||
+              record.status === 'pending' ||
+              record.status === 'provider_succeeded'
+            ) {
+              const debitUser = record.user_id;
 
               // Finalize debit on ledger when Stripe transfer completes
-              await debit(debitUser, debitCurrency, debitAmount, trx, record.id);
+              await debit(debitUser, debitCurrency, recordAmount, trx, record.id);
               await updateWithdrawalStatus(record.id, 'completed', trx);
 
               await recordProcessedWebhook({
@@ -102,20 +146,13 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
               logger.info('Withdrawal transfer paid & ledger debited', {
                 userId: debitUser,
                 transferId,
-                amount: debitAmount,
+                amount: recordAmount,
                 requestId: record.id,
               });
             } else {
-              // Record processed to ensure idempotency even if withdrawal was already completed/missing
-              await recordProcessedWebhook({
-                id: uuidv4(),
-                event_type: event.type,
-                source_id: transferId,
-              }, trx);
-
-              logger.info('Withdrawal transfer.paid ignored (already processed or unknown)', {
+              logger.warn('Withdrawal transfer.paid received in unexpected status', {
                 transferId,
-                recordStatus: record?.status,
+                recordStatus: record.status,
               });
             }
           });
@@ -129,7 +166,12 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
           const db = getDb();
           await db.transaction(async (trx) => {
             const record = await getWithdrawalRecordByTransferId(transferId, trx);
-            if (record && record.status === 'pending') {
+            if (
+              record &&
+              (record.status === 'provider_pending' ||
+                record.status === 'created' ||
+                record.status === 'pending')
+            ) {
               // Marking withdrawal request status as failed releases the pending hold.
               // Balance was not debited, so no ledger update is required. Idempotent check ensures duplicate webhooks do nothing.
               await updateWithdrawalStatus(record.id, 'failed', trx);

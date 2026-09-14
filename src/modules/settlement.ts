@@ -2,6 +2,7 @@
 //  SETTLEMENT ENGINE ⭐ — Queue, Batching, Netting (DB Persisted)
 // ============================================================
 
+import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { Transaction, BatchSummary, Currency } from '../utils/types';
 import { logger } from '../utils/logger';
@@ -31,26 +32,28 @@ function mapRowToTransaction(row: any): Transaction {
 // ----------------------------
 //  Enqueue (DB INSERT)
 // ----------------------------
-export async function enqueue(tx: Transaction): Promise<void> {
-  const db = getDb();
-  await db('settlement_queue').insert({
-    id: uuidv4(),
-    tx_id: tx.txId,
-    sender: tx.sender,
-    receiver: tx.receiver,
-    original_amount: tx.originalAmount,
-    converted_amount: tx.convertedAmount,
-    source_currency: tx.sourceCurrency,
-    dest_currency: tx.destCurrency,
-    rate: tx.rate,
-    compliance_score: tx.complianceScore,
-    status: 'pending',
-    batch_id: tx.batchId ?? null,
-    created_at: tx.timestamp ? new Date(tx.timestamp) : new Date(),
-  });
+export async function enqueue(tx: Transaction, trx?: Knex.Transaction): Promise<void> {
+  const client = trx ?? getDb();
+  await client('settlement_queue')
+    .insert({
+      id: uuidv4(),
+      tx_id: tx.txId,
+      sender: tx.sender,
+      receiver: tx.receiver,
+      original_amount: tx.originalAmount,
+      converted_amount: tx.convertedAmount,
+      source_currency: tx.sourceCurrency,
+      dest_currency: tx.destCurrency,
+      rate: tx.rate,
+      compliance_score: tx.complianceScore,
+      status: 'pending',
+      batch_id: tx.batchId ?? null,
+      created_at: tx.timestamp ? new Date(tx.timestamp) : new Date(),
+    })
+    .onConflict('tx_id')
+    .ignore();
 
-  const size = await getQueueSize();
-  logger.settle(`Transaction enqueued → queue size: ${size}`, {
+  logger.settle(`Transaction enqueued for settlement`, {
     txId: tx.txId,
     sender: tx.sender,
     receiver: tx.receiver,

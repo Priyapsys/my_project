@@ -19,6 +19,7 @@ import { logger } from '../utils/logger';
 import { SettlementAnchorFailedError } from '../utils/errors';
 import { createHash } from 'crypto';
 import { getAllSettlementBatches } from '../modules/ledger';
+import { getDb } from '../db/connection';
 
 // ----------------------------
 //  Solana Devnet Connection & Wallet
@@ -255,6 +256,29 @@ export async function reconcilePendingBatches(): Promise<{ checked: number; reso
       logger.warn(`Failed to check status for pending batch ${batch.batch_id}`);
     }
   }
-  
+
+  // Check stuck withdrawals (> 30 mins in provider_pending)
+  try {
+    const db = getDb();
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const stuckWithdrawals = await db('withdrawal_requests')
+      .where('status', 'provider_pending')
+      .where('updated_at', '<', thirtyMinutesAgo)
+      .select('id', 'user_id', 'amount', 'currency', 'stripe_transfer_id', 'updated_at');
+
+    if (stuckWithdrawals.length > 0) {
+      logger.warn(
+        `STUCK WITHDRAWALS ALERT: ${stuckWithdrawals.length} withdrawal(s) stuck in provider_pending > 30m`,
+        {
+          stuckIds: stuckWithdrawals.map((w) => w.id),
+        }
+      );
+    }
+  } catch (err) {
+    logger.error('Failed to check for stuck withdrawals', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
   return { checked: pending.length, resolved };
 }

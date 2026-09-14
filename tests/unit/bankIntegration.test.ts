@@ -51,15 +51,11 @@ describe('Bank Integration Module & Routes', () => {
   const originalEnv = process.env;
 
   beforeAll(async () => {
-    try {
-      await initDatabase();
-    } catch (e) {}
+    await initDatabase();
   });
 
   afterAll(async () => {
-    try {
-      await closeDatabase();
-    } catch (e) {}
+    await closeDatabase();
     process.env = originalEnv;
   });
 
@@ -171,7 +167,7 @@ describe('Bank Integration Module & Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.status).toBe('pending');
+      expect(res.body.data.status).toBe('provider_pending');
       expect(res.body.data.transferId).toBe('tr_test_123');
 
       // Check balance: raw account balance is still 100 USD (debit not applied yet), available is 60 USD

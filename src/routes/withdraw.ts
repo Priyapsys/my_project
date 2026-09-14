@@ -5,6 +5,7 @@
 import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { authMiddleware } from '../middleware/auth';
+import { idempotencyMiddleware } from '../middleware/idempotency';
 import { validateBody } from '../middleware/validation';
 import { withdrawSchema } from '../schemas';
 import {
@@ -12,6 +13,7 @@ import {
   BankIntegrationError,
   createWithdrawalRecord,
   updateWithdrawalStripeTransferId,
+  updateWithdrawalToProviderPending,
   updateWithdrawalStatus,
   getWithdrawalRecordById,
   getUserWithdrawalRecords,
@@ -30,6 +32,7 @@ router.post(
   '/',
   authMiddleware,
   validateBody(withdrawSchema),
+  idempotencyMiddleware,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     let requestId: string | null = null;
     try {
@@ -48,8 +51,10 @@ router.post(
 
     const db = getDb();
     requestId = uuidv4();
+    const stripeIdempotencyKey =
+      (req.headers['idempotency-key'] as string | undefined)?.trim() || `stripe_idem_${requestId}`;
 
-    // Check available balance and create pending request atomically inside a transaction
+    // Check available balance and create record with status 'created' atomically inside a transaction
     await db.transaction(async (trx) => {
       const available = await getAvailableBalance(userId, 'USD', trx);
       if (money.lt(available, amountStr)) {
@@ -62,7 +67,8 @@ router.post(
           userId,
           amount: amountStr,
           currency: 'USD',
-          status: 'pending',
+          status: 'created',
+          stripeIdempotencyKey,
         },
         trx
       );
@@ -73,8 +79,8 @@ router.post(
     // ── Create Stripe Transfer ────────────────────────────────
     let result;
     try {
-      result = await processWithdrawal(userId, amountStr, destinationAccountId);
-      await updateWithdrawalStripeTransferId(requestId, result.transferId);
+      result = await processWithdrawal(userId, amountStr, destinationAccountId, stripeIdempotencyKey);
+      await updateWithdrawalToProviderPending(requestId, result.transferId);
     } catch (stripeErr) {
       // If Stripe transfer creation fails, mark withdrawal request as failed to release hold
       await updateWithdrawalStatus(requestId, 'failed');
@@ -88,7 +94,7 @@ router.post(
       data: {
         requestId,
         transferId: result.transferId,
-        status: 'pending',
+        status: 'provider_pending',
       },
       timestamp: new Date().toISOString(),
     });

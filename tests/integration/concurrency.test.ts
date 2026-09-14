@@ -1,9 +1,16 @@
+// ============================================================
+//  INTEGRATION TEST: Concurrency Safety
+//  REQUIRES: DB_DRIVER=postgres (real PostgreSQL)
+//  Reason: Tests rely on SELECT FOR UPDATE row locking, which
+//          SQLite does not support with the same semantics.
+// ============================================================
 import request from 'supertest';
 import app from '../../src/server';
-import { getDb, initDatabase, closeDatabase } from '../../src/db/connection';
+import { getDb } from '../../src/db/connection';
 import { issueToken } from '../../src/middleware/auth';
 import { seedKycVerified } from '../../src/modules/kyc';
 import { getAvailableBalance } from '../../src/modules/ledger';
+import { describePg, withPostgresLifecycle } from '../helpers/pgGuard';
 
 jest.mock('stripe', () => {
   return jest.fn().mockImplementation(() => ({
@@ -19,27 +26,21 @@ jest.mock('stripe', () => {
   }));
 });
 
-let token: string;
-const USER = 'concurrent-user';
+describePg('Concurrency Safety', () => {
+  let token: string;
+  const USER = 'concurrent-user';
 
-beforeAll(async () => {
-  process.env.STRIPE_TEST_KEY = 'sk_test_mock_concurrency';
-  process.env.STRIPE_WEBHOOK_SECRET = 'whsec_mock';
-  try {
-    await initDatabase();
-  } catch (e) {}
-  token = issueToken(USER);
-  await seedKycVerified([USER]);
-});
+  beforeAll(() => {
+    process.env.STRIPE_TEST_KEY = process.env.STRIPE_TEST_KEY || 'sk_test_mock_concurrency';
+    process.env.STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_mock';
+  });
 
-afterAll(async () => {
-  try {
-    await closeDatabase();
-  } catch (e) {}
-});
+  withPostgresLifecycle('Concurrency Safety', async () => {
+    token = issueToken(USER);
+    await seedKycVerified([USER]);
+  });
 
-beforeEach(async () => {
-  try {
+  beforeEach(async () => {
     const db = getDb();
     await db('withdrawal_requests').del();
     await db('idempotency_keys').del();
@@ -56,10 +57,8 @@ beforeEach(async () => {
     await db('accounts').insert({ user_id: USER, currency: 'USD', balance: 1000 });
     await db('treasury_reserves').insert({ currency: 'USD', amount: 50000 });
     await db('treasury_reserves').insert({ currency: 'GBP', amount: 50000 });
-  } catch (err) {}
-});
+  });
 
-describe('Concurrency Safety', () => {
   it('should handle concurrent transfer requests safely with SELECT FOR UPDATE', async () => {
     // We send 10 concurrent requests for 200 USD each.
     // Starting balance is 1000 USD.

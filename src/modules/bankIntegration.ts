@@ -107,6 +107,27 @@ export async function createDepositIntent(
 
 // ── Withdrawal (Transfer) ───────────────────────────────────
 
+export type WithdrawalStatus =
+  | 'created'
+  | 'provider_pending'
+  | 'provider_succeeded'
+  | 'completed'
+  | 'failed'
+  | 'pending';
+
+const VALID_WITHDRAWAL_TRANSITIONS: Record<string, string[]> = {
+  created: ['provider_pending', 'failed'],
+  provider_pending: ['provider_succeeded', 'completed', 'failed'],
+  provider_succeeded: ['completed', 'failed'],
+  pending: ['provider_pending', 'provider_succeeded', 'completed', 'failed'],
+  completed: [],
+  failed: [],
+};
+
+export function isValidWithdrawalTransition(from: string, to: string): boolean {
+  return VALID_WITHDRAWAL_TRANSITIONS[from]?.includes(to) ?? false;
+}
+
 export interface WithdrawalResult {
   transferId: string;
   status: string;
@@ -119,7 +140,8 @@ export interface WithdrawalResult {
 export async function processWithdrawal(
   userId: string,
   amount: string,
-  destinationAccountId: string
+  destinationAccountId: string,
+  stripeIdempotencyKey?: string
 ): Promise<WithdrawalResult> {
   if (!amount || typeof amount !== 'string' || money.toDecimal(amount).lte(0)) {
     throw new BankIntegrationError('Withdrawal amount must be greater than zero');
@@ -142,7 +164,7 @@ export async function processWithdrawal(
       };
     }
 
-    const transfer = await s.transfers.create({
+    const transferParams = {
       amount: money.toMinorUnits(amount, 'usd'), // cents
       currency: 'usd',
       destination: destinationAccountId,
@@ -150,7 +172,11 @@ export async function processWithdrawal(
         userId,
         type: 'withdrawal',
       },
-    });
+    };
+
+    const transfer = stripeIdempotencyKey
+      ? await s.transfers.create(transferParams, { idempotencyKey: stripeIdempotencyKey })
+      : await s.transfers.create(transferParams);
 
     logger.info('Withdrawal Transfer created', {
       userId,
@@ -179,7 +205,8 @@ export interface WithdrawalRequestRecord {
   amount: string;
   currency: string;
   stripe_transfer_id: string | null;
-  status: 'pending' | 'completed' | 'failed';
+  stripe_idempotency_key?: string | null;
+  status: WithdrawalStatus;
   created_at: Date;
   updated_at: Date;
 }
@@ -190,7 +217,8 @@ export async function createWithdrawalRecord(
     userId: string;
     amount: string;
     currency?: string;
-    status?: 'pending' | 'completed' | 'failed';
+    status?: WithdrawalStatus;
+    stripeIdempotencyKey?: string;
   },
   trx?: Knex.Transaction
 ): Promise<WithdrawalRequestRecord> {
@@ -202,7 +230,8 @@ export async function createWithdrawalRecord(
     amount: record.amount,
     currency: record.currency || 'USD',
     stripe_transfer_id: null,
-    status: record.status || 'pending',
+    stripe_idempotency_key: record.stripeIdempotencyKey || null,
+    status: record.status || 'created',
     created_at: now,
     updated_at: now,
   };
@@ -227,17 +256,44 @@ export async function updateWithdrawalStripeTransferId(
     });
 }
 
+export async function updateWithdrawalToProviderPending(
+  id: string,
+  stripeTransferId: string,
+  trx?: Knex.Transaction
+): Promise<void> {
+  const db = trx ?? getDb();
+  await db('withdrawal_requests')
+    .where({ id })
+    .update({
+      stripe_transfer_id: stripeTransferId,
+      status: 'provider_pending',
+      updated_at: new Date(),
+    });
+}
+
 export async function updateWithdrawalStatus(
   idOrTransferId: string,
-  status: 'pending' | 'completed' | 'failed',
+  status: WithdrawalStatus,
   trx?: Knex.Transaction
 ): Promise<boolean> {
   const db = trx ?? getDb();
-  const updated = await db('withdrawal_requests')
+  const existing = await db('withdrawal_requests')
     .where(function () {
       this.where({ id: idOrTransferId }).orWhere({ stripe_transfer_id: idOrTransferId });
     })
-    .where({ status: 'pending' })
+    .first();
+
+  if (!existing) return false;
+  if (existing.status === status) return true;
+
+  if (!isValidWithdrawalTransition(existing.status, status)) {
+    throw new BankIntegrationError(
+      `Invalid withdrawal status transition from '${existing.status}' to '${status}'`
+    );
+  }
+
+  const updated = await db('withdrawal_requests')
+    .where({ id: existing.id })
     .update({
       status,
       updated_at: new Date(),

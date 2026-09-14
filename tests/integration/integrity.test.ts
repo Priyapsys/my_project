@@ -8,13 +8,13 @@ let token: string;
 const USER = 'integrity-user';
 
 beforeAll(async () => {
-  try { await initDatabase(); } catch(e) {}
+  await initDatabase();
   token = issueToken(USER);
   await seedKycVerified([USER]);
 });
 
 afterAll(async () => {
-  try { await closeDatabase(); } catch(e) {}
+  await closeDatabase();
 });
 
 beforeEach(async () => {

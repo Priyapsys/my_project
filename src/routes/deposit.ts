@@ -4,6 +4,7 @@
 
 import { Router, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
+import { idempotencyMiddleware } from '../middleware/idempotency';
 import { validateBody } from '../middleware/validation';
 import { depositSchema } from '../schemas';
 import { createDepositIntent, BankIntegrationError } from '../modules/bankIntegration';
@@ -19,6 +20,7 @@ router.post(
   '/',
   authMiddleware,
   validateBody(depositSchema),
+  idempotencyMiddleware,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { amount, currency } = req.body;

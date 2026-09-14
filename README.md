@@ -39,13 +39,24 @@ npm run dev
 ```
 *(The frontend application will launch locally via Vite on `http://localhost:5173`)*
 
-## 🧪 Testing the API Flow
+## 🧪 Testing
 
-The repository comes with a comprehensive bash script that exercises the exact E2E transaction flow (Health check -> Auth -> KYC -> Funding -> Transfers -> Settlement run -> Proof verification):
+- **Unit tests**: Fast unit tests run against local SQLite by default (`DB_DRIVER=sqlite`).
+- **Money-path integration tests**: Integration tests that test row locking (`SELECT FOR UPDATE`), concurrency, or PostgreSQL-specific semantics require a real PostgreSQL instance (`DB_DRIVER=postgres`).
+- To run tests:
+  ```bash
+  # Unit tests (SQLite default)
+  npm test
 
-```bash
-npm run test:flow
-```
+  # Integration tests against PostgreSQL
+  DB_DRIVER=postgres DATABASE_URL=postgres://user:password@localhost:5432/globalpay npm test
+  ```
+
+## 🗄️ Database Configuration
+
+Set `DB_DRIVER` in your environment:
+- `DB_DRIVER=postgres` (Default, **strictly required** in `production`). Connects using `DATABASE_URL`. If PostgreSQL is unreachable, the server fails loudly with no silent fallbacks.
+- `DB_DRIVER=sqlite` (Lightweight local development / unit tests only). Never permitted when `NODE_ENV=production`.
 
 ## ⚖️ License
 MIT

@@ -135,7 +135,8 @@ export async function getPendingWithdrawalHolds(
 ): Promise<string> {
   const db = trx ?? getDb();
   let query = db('withdrawal_requests')
-    .where({ user_id: userId, currency, status: 'pending' });
+    .where({ user_id: userId, currency })
+    .whereIn('status', ['created', 'provider_pending', 'provider_succeeded', 'pending']);
 
   if (excludeRequestId) {
     query = query.whereNot({ id: excludeRequestId });

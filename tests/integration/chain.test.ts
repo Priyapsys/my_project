@@ -19,11 +19,11 @@ jest.mock('../../src/modules/ledger', () => ({
 
 describe('Blockchain Integration Tests', () => {
   beforeAll(async () => {
-    try { await initDatabase(); } catch(e) {}
+    await initDatabase();
   });
 
   afterAll(async () => {
-    try { await closeDatabase(); } catch(e) {}
+    await closeDatabase();
   });
 
   describe('Devnet Anchor (Live)', () => {
