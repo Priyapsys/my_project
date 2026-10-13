@@ -55,7 +55,7 @@ test.describe('Deposit Workflow', () => {
     expect(body.success).toBe(true);
     expect(body.data.demo).toBe(true);
     expect(body.data.credited).toBe(true);
-    expect(body.data.amount).toBe(500);
+    expect(Number(body.data.amount)).toBe(500);
     expect(body.data.currency).toBe('USD');
 
     // Verify ledger balance was directly updated
@@ -63,7 +63,7 @@ test.describe('Deposit Workflow', () => {
       headers: { Authorization: `Bearer ${token}` },
     });
     const balanceBody = await balanceRes.json();
-    expect(balanceBody.data.balances.USD).toBe(1500);
+    expect(Number(balanceBody.data.balances.USD)).toBe(1500);
   });
 
   test('rejects deposit with missing amount', async ({ request }) => {

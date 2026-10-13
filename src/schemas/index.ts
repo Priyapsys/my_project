@@ -12,21 +12,24 @@ const CURRENCIES = ['USD', 'INR', 'GBP', 'EUR', 'AED', 'JPY'] as const;
  * a strictly positive exact decimal number.
  */
 const positiveDecimalString = (field = 'amount') =>
-  z
-    .string({ message: `${field} must be a positive number` })
-    .trim()
-    .min(1, `${field} is required`)
-    .regex(/^\d+(\.\d+)?$/, `${field} must be a positive number`)
-    .refine(
-      (val) => {
-        try {
-          return new Decimal(val).gt(0);
-        } catch {
-          return false;
-        }
-      },
-      { message: `${field} must be a positive number` }
-    );
+  z.preprocess(
+    (val) => (typeof val === 'number' && Number.isFinite(val) ? String(val) : val),
+    z
+      .string({ message: `${field} must be a positive number` })
+      .trim()
+      .min(1, `${field} is required`)
+      .regex(/^\d+(\.\d+)?$/, `${field} must be a positive number`)
+      .refine(
+        (val) => {
+          try {
+            return new Decimal(val).gt(0);
+          } catch {
+            return false;
+          }
+        },
+        { message: `${field} must be a positive number` }
+      )
+  );
 
 /**
  * Transfer Request Schema

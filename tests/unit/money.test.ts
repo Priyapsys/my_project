@@ -57,15 +57,33 @@ describe('Money Utility Unit Tests', () => {
     });
   });
 
-  describe('Currency precision rules', () => {
-    it('rounds USD to 2 decimal places', () => {
+  describe('roundToCurrency edge cases', () => {
+    it('rounds standard values to currency precision', () => {
       expect(money.roundToCurrency('10.255', 'USD')).toBe('10.26');
       expect(money.roundToCurrency('10.254', 'USD')).toBe('10.25');
     });
 
-    it('rounds JPY to 0 decimal places', () => {
+    it('handles sub-cent amounts correctly', () => {
+      expect(money.roundToCurrency('0.001', 'USD')).toBe('0.00');
+      expect(money.roundToCurrency('0.0049', 'USD')).toBe('0.00');
+      expect(money.roundToCurrency('0.005', 'USD')).toBe('0.01');
+      expect(money.roundToCurrency('0.009', 'USD')).toBe('0.01');
+      expect(money.roundToCurrency('0.0000001', 'USD')).toBe('0.00');
+    });
+
+    it('handles large monetary amounts without precision loss', () => {
+      expect(money.roundToCurrency('999999999999999999.999', 'USD')).toBe('1000000000000000000.00');
+      expect(money.roundToCurrency('1234567890123456.784', 'USD')).toBe('1234567890123456.78');
+      expect(money.roundToCurrency('1234567890123456.785', 'USD')).toBe('1234567890123456.79');
+    });
+
+    it('handles JPY zero-decimal rounding for edge cases', () => {
+      expect(money.roundToCurrency('0.4', 'JPY')).toBe('0');
+      expect(money.roundToCurrency('0.5', 'JPY')).toBe('1');
       expect(money.roundToCurrency('151.6', 'JPY')).toBe('152');
       expect(money.roundToCurrency('151.4', 'JPY')).toBe('151');
+      expect(money.roundToCurrency('999999999999999999.4', 'JPY')).toBe('999999999999999999');
+      expect(money.roundToCurrency('999999999999999999.5', 'JPY')).toBe('1000000000000000000');
     });
 
     it('formats to 4 decimals when currency is omitted for DB storage', () => {
@@ -79,7 +97,31 @@ describe('Money Utility Unit Tests', () => {
     });
   });
 
-  describe('Minor units conversions (Stripe)', () => {
+  describe('Floating-point comparison with eq', () => {
+    it('accurately compares results where standard JS float arithmetic fails', () => {
+      // In JS: (0.1 + 0.2 === 0.3) is false due to IEEE-754 (0.30000000000000004)
+      const sum = money.add('0.1', '0.2');
+      expect(money.eq(sum, '0.3')).toBe(true);
+
+      const diff = money.sub('1.0', '0.9');
+      expect(money.eq(diff, '0.1')).toBe(true);
+    });
+
+    it('recognizes equivalent values across different formatting representations', () => {
+      expect(money.eq('10.0', '10.00')).toBe(true);
+      expect(money.eq('10.000', '10')).toBe(true);
+      expect(money.eq('0.00', '0')).toBe(true);
+      expect(money.eq('100.5', '100.50000')).toBe(true);
+    });
+
+    it('correctly identifies unequal values', () => {
+      expect(money.eq('10.00', '10.01')).toBe(false);
+      expect(money.eq('0', '0.0001')).toBe(false);
+      expect(money.eq('-5', '5')).toBe(false);
+    });
+  });
+
+  describe('Minor units conversions & round-trip (Stripe)', () => {
     it('converts USD to cents safely', () => {
       expect(money.toMinorUnits('10.25', 'USD')).toBe(1025);
       expect(money.toMinorUnits('0.01', 'USD')).toBe(1);
@@ -100,6 +142,25 @@ describe('Money Utility Unit Tests', () => {
       expect(money.fromMinorUnits('1025', 'USD')).toBe('10.25');
       expect(money.fromMinorUnits(5000, 'USD')).toBe('50.00');
       expect(money.fromMinorUnits(1500, 'JPY')).toBe('1500');
+    });
+
+    it('satisfies round-trip conversion for multiple currencies', () => {
+      const testCases: Array<{ amount: string; currency: string }> = [
+        { amount: '10.25', currency: 'USD' },
+        { amount: '0.01', currency: 'USD' },
+        { amount: '100.00', currency: 'GBP' },
+        { amount: '250.75', currency: 'EUR' },
+        { amount: '50000.50', currency: 'INR' },
+        { amount: '1500', currency: 'JPY' },
+        { amount: '0.00', currency: 'USD' },
+        { amount: '0', currency: 'JPY' },
+      ];
+
+      for (const { amount, currency } of testCases) {
+        const minor = money.toMinorUnits(amount, currency);
+        const restored = money.fromMinorUnits(minor, currency);
+        expect(restored).toBe(amount);
+      }
     });
   });
 });

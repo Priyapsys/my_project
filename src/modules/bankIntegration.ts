@@ -214,7 +214,8 @@ export interface WithdrawalRequestRecord {
 export async function createWithdrawalRecord(
   record: {
     id: string;
-    userId: string;
+    userId?: string;
+    user_id?: string;
     amount: string;
     currency?: string;
     status?: WithdrawalStatus;
@@ -226,7 +227,7 @@ export async function createWithdrawalRecord(
   const now = new Date();
   const data = {
     id: record.id,
-    user_id: record.userId,
+    user_id: record.userId ?? record.user_id ?? '',
     amount: record.amount,
     currency: record.currency || 'USD',
     stripe_transfer_id: null,
@@ -330,10 +331,27 @@ export async function getWithdrawalRecordByTransferId(
 
 export async function getWithdrawalRecordById(
   id: string,
+  userIdOrTrx?: string | Knex.Transaction,
   trx?: Knex.Transaction
 ): Promise<WithdrawalRequestRecord | null> {
-  const db = trx ?? getDb();
-  const row = await db('withdrawal_requests').where({ id }).first();
+  let userId: string | undefined;
+  let transaction: Knex.Transaction | undefined;
+
+  if (typeof userIdOrTrx === 'string') {
+    userId = userIdOrTrx;
+    transaction = trx;
+  } else if (userIdOrTrx) {
+    transaction = userIdOrTrx;
+  } else {
+    transaction = trx;
+  }
+
+  const db = transaction ?? getDb();
+  const query = db('withdrawal_requests').where({ id });
+  if (userId) {
+    query.andWhere({ user_id: userId });
+  }
+  const row = await query.first();
   if (!row) return null;
   return {
     id: row.id,

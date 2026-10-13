@@ -33,6 +33,7 @@ export default defineConfig({
         NODE_ENV: 'test',
         STRIPE_TEST_KEY: 'sk_test_mock',
         STRIPE_WEBHOOK_SECRET: 'whsec_mock',
+        DB_DRIVER: process.env.DB_DRIVER || 'sqlite',
       },
     },
     {

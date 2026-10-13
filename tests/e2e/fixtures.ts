@@ -20,19 +20,21 @@ export const test = base.extend<CustomFixtures>({
   loginAs: async ({ page, request }, use) => {
     const loginUser = async (userId: string, options?: { balances?: Record<string, number> }) => {
       // 1. Seed user in backend (sets KYC verified and optional balances)
+      const seedUsers = ['alice', 'bob', 'charlie', 'diana', 'eve'];
+      const password = seedUsers.includes(userId)
+        ? (process.env.SEED_USER_PASSWORD ?? 'DemoPassword123!')
+        : (process.env.TEST_USER_PASSWORD ?? 'TestPassword123!');
+
       await request.post('http://localhost:3000/api/test/seed-user', {
         data: {
           userId,
+          password,
           balances: options?.balances,
           kycVerified: true,
         },
       });
 
       // 2. Obtain real JWT from backend login endpoint
-      const seedUsers = ['alice', 'bob', 'charlie', 'diana', 'eve'];
-      const password = seedUsers.includes(userId)
-        ? (process.env.SEED_USER_PASSWORD ?? 'DemoPassword123!')
-        : (process.env.TEST_USER_PASSWORD ?? 'TestPassword123!');
       const response = await request.post('http://localhost:3000/api/login', {
         data: { userId, password },
       });

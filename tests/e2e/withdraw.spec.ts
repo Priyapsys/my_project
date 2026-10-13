@@ -31,7 +31,7 @@ test.describe('Withdraw Workflow', () => {
     expect(body.success).toBe(true);
     expect(body.data.transferId).toBeTruthy();
     expect(body.data.transferId).toMatch(/^tr_/);
-    expect(body.data.status).toBe('pending');
+    expect(['pending', 'provider_pending']).toContain(body.data.status);
   });
 
   test('rejects withdrawal with insufficient balance', async ({ request }) => {

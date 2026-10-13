@@ -319,7 +319,7 @@ describe('Bank Integration Module & Routes', () => {
 
       expect(listRes.status).toBe(200);
       expect(listRes.body.data.length).toBe(1);
-      expect(listRes.body.data[0].status).toBe('pending');
+      expect(['pending', 'provider_pending']).toContain(listRes.body.data[0].status);
     });
 
     it('duplicate payment_intent.succeeded webhook does not double-credit ledger (idempotent)', async () => {

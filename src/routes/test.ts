@@ -59,13 +59,19 @@ router.post('/reset', async (_req: Request, res: Response) => {
  */
 router.post('/seed-user', async (req: Request, res: Response) => {
   try {
-    const { userId, balances, kycVerified = true } = req.body;
+    const { userId, password, balances, kycVerified = true } = req.body;
     if (!userId) {
       res.status(400).json({ success: false, error: 'userId is required' });
       return;
     }
 
-    await ensureUser(userId, process.env.TEST_USER_PASSWORD ?? 'TestPassword123!', 'user');
+    const seedUsers = ['alice', 'bob', 'charlie', 'diana', 'eve'];
+    const defaultPassword = seedUsers.includes(userId)
+      ? (process.env.SEED_USER_PASSWORD ?? 'DemoPassword123!')
+      : (process.env.TEST_USER_PASSWORD ?? 'TestPassword123!');
+    const role = userId === 'alice' ? 'admin' : 'user';
+
+    await ensureUser(userId, password ?? defaultPassword, role);
 
     if (kycVerified) {
       await seedKycVerified([userId]);
